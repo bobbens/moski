@@ -1,0 +1,3 @@
+firmware/*.elf
+firmware/*.hex
+firmware/*.o
