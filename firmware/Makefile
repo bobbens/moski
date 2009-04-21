@@ -27,7 +27,7 @@ CFLAGS   :=	-g						\
 		   -Wall						\
          -Wextra              \
 		   -Wstrict-prototypes	\
-		   -I.						\
+		   -I.
 
 
 
@@ -59,7 +59,7 @@ SRC      := moski.c
 ASRC     := 
 GCCLIB   :=
 
-OBJS     := $(patsubst %.c,%.o,$(SRC))
+OBJS     := moski.o i2cs.o
 
 GDBINITFILE := gdbinit-$(PRG)
 
