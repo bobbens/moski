@@ -1,0 +1,9 @@
+
+
+         MOSKI
+
+   
+   MOSKI is firmware for motor control boards.  Currently supported platform:
+
+
+      * Dual h-bridge with attiny24 communicating as i2c slave.
