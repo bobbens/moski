@@ -6,10 +6,10 @@
 
 
 /*
- * Motor positions.
+ * Motor velocity.
  */
-static int16_t mota = 0; /**< Motor A position. */
-static int16_t motb = 0; /**< Motor B position. */
+static volatile int16_t mota = 0; /**< Motor A velocity. */
+static volatile int16_t motb = 0; /**< Motor B velocity. */
 static uint8_t mot_accel; /**< Motor acceleration. */
 static uint8_t mot_soft; /**< Soft start zone. */
 static uint8_t mot_soft_accel; /**< Soft start acceleration. */
@@ -63,6 +63,10 @@ void motors_init (void)
     *    f_pwm = f_clk / (256 * N)
     *    f_pwm = 20 MHz / (256 * 64) = 1.22 kHz
     */
+   TCCR0A = _BV(WGM00) | _BV(WGM01) | /* Fast PWM mode. */
+            _BV(COM0A1); /* Non-inverting mode. */
+   TCCR0B = _BV(CS01)  | _BV(CS00); /* 64 prescaler */
+   OCR0A  = 0; /* Start out stopped. */
 }
 
 
