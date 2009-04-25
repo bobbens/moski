@@ -45,7 +45,7 @@ static uint8_t i2cs_tx_len = 0x00; /**< Current length of data within the TX buf
  */
 #define SET_USI_TO_SEND_ACK() \
 { \
-   USIDR    = 0; /* Prepare ACK. */ \
+   USIDR    = 0x00; /* Prepare ACK. */ \
    DDR_USI |= _BV(PORT_USI_SDA); /* Set SDA as output. */ \
    USISR    = (0<<USI_START_COND_INT) | /* Clear all flags excet start cond. */ \
               (1<<USIOIF) | (1<<USIPF) | (1<<USIDC) | \
@@ -62,7 +62,7 @@ static uint8_t i2cs_tx_len = 0x00; /**< Current length of data within the TX buf
 #define SET_USI_TO_READ_ACK() \
 { \
    DDR_USI &= ~_BV(PORT_USI_SDA); /* Set SDA as input. */ \
-   USIDR    = 0; /* Prepare ACK. */ \
+   USIDR    = 0x00; /* Prepare ACK. */ \
    USISR    = (0<<USI_START_COND_INT) | /* Clear all flags excet start cond. */ \
               (1<<USIOIF) | (1<<USIPF) | (1<<USIDC) | \
               (0x0E<<USICNT0); /* Set USI counter to shift 1 bit. */ \
@@ -146,7 +146,7 @@ ISR(SIG_USI_START)
            (0<<USITC);
    /* Clear flags. */
    USISR = (1<<USI_START_COND_INT) | (1<<USIOIF) | (1<<USIPF) | (1<<USIDC) |
-           (0<<USICNT0); /* Set USI to sample 8 bits
+           (0x0<<USICNT0); /* Set USI to sample 8 bits
                             i.e. count 16 external pin toggles. */
 }
 
@@ -182,6 +182,8 @@ ISR(SIG_USI_OVERFLOW)
                i2cs_overflow_state = I2CS_STATE_REQUEST_DATA;
                i2cs_rx_pos = 0x00; /* Reset position. */
             }
+
+            /* Send ACK, slave always replies to address with ACK. */
             SET_USI_TO_SEND_ACK();
          }
          else
