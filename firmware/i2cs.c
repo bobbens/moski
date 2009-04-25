@@ -108,7 +108,7 @@ void i2cs_init (void)
    DDR_USI  &= ~_BV(PORT_USI_SDA); /* Set SDA as input */
 
    /* Enable Start Condition Interrupt. Disable Overflow Interrupt. */
-   USICR = _BV(USISIE) | _BV(USIOIE) |
+   USICR = _BV(USISIE) | /* _BV(USIOIE) | */
            /* Set USI in Two-wire mode. No USI Counter overflow prior
             * to first Start Condition (potentail failure) */
            _BV(USIWM1) | /*_BV(USIWM0) |*/
