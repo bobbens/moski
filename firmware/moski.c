@@ -116,8 +116,8 @@ int main (void)
    sched_init();
 
    /* Set up watchdog timer. */
-   wdt_enable(WDTO_250MS);
    wdt_reset(); /* Just in case. */
+   wdt_enable(WDTO_250MS);
 
    /* Set interrupts. */
    sei();
