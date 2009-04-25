@@ -51,10 +51,10 @@ void motors_set( int16_t motor_a, int16_t motor_b )
 void motors_init (void)
 {
    /* Initialize reverse pins. */
-   PORTA    |=    _BV(PINA3) |
-                  _BV(PINA2);
-   DDRA     |=    _BV(PINA3) |
-                  _BV(PINA2);
+   PORTA |= _BV(PINA3) |
+            _BV(PINA2);
+   DDRA  |= _BV(PINA3) |
+            _BV(PINA2);
 
    /* Initialize pwm.
     *
@@ -66,7 +66,9 @@ void motors_init (void)
    TCCR0A = _BV(WGM00) | _BV(WGM01) | /* Fast PWM mode. */
             _BV(COM0A1); /* Non-inverting mode. */
    TCCR0B = _BV(CS01)  | _BV(CS00); /* 64 prescaler */
-   OCR0A  = 0; /* Start out stopped. */
+   /* Start both motors stopped. */
+   OCR0A  = 0;
+   OCR0B  = 0;
 }
 
 
