@@ -131,21 +131,27 @@ void i2cs_init (void)
  */
 ISR(SIG_USI_START)
 {
-   // Set default starting conditions for new TWI package
+   uint8_t tmp;
+
+   /* Store volatile temporarily. */
+   tmp = USISR;
+
+   /* Set default starting conditions for new I2C package. */
    i2cs_overflow_state = I2CS_STATE_CHECK_ADDRESS;
    DDR_USI  &= ~_BV(PORT_USI_SDA); /* Set SDA as input. */
-   while ((PIN_USI & _BV(PORT_USI_SCL)) & !(USISR & _BV(USIPF))); /* Wait for SCL to go low to ensure the "Start Condition" has completed. */
+   /* Wait for SCL to go low to ensure the "Start Condition" has completed. */
+   while ((PIN_USI & _BV(PORT_USI_SCL)) & !(tmp & _BV(USIPF)));
    /* If a Stop condition arises then leave the interrupt to prevent waiting forever. */
    /* Enable Overflow and Start Condition Interrupt.
     * (Keep START condition interrupt to detect RESTART) */
-   USICR = (1<<USISIE) | (1<<USIOIE) |
+   USICR = _BV(USISIE) | _BV(USIOIE) |
            /* Set USI in Two-wire mode. */
-           (1<<USIWM1) | (1<<USIWM0) |
+           _BV(USIWM1) | _BV(USIWM0) |
            /* Shift Register Clock Source = External, positive edge. */
-           (1<<USICS1) | (0<<USICS0) | (0<<USICLK) |
-           (0<<USITC);
+           _BV(USICS1) | /* _BV(USICS0) | _BV(USICLK) | */
+           /* _BV(USITC) | */ 0;
    /* Clear flags. */
-   USISR = (1<<USI_START_COND_INT) | (1<<USIOIF) | (1<<USIPF) | (1<<USIDC) |
+   USISR = _BV(USI_START_COND_INT) | _BV(USIOIF) | _BV(USIPF) | _BV(USIDC) |
            (0x0<<USICNT0); /* Set USI to sample 8 bits
                             i.e. count 16 external pin toggles. */
 }
