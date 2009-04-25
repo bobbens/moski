@@ -11,7 +11,6 @@
  * Configuration.
  */
 /* Buffers. */
-#define I2CS_RX_BUFFER_SIZE      0x40
 #define I2CS_TX_BUFFER_SIZE      0x40
 /* Pins (ATtiny24). */
 #define DDR_USI                  DDRA

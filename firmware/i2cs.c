@@ -9,7 +9,6 @@
  * Current state.
  */
 typedef enum i2cs_state_e {
-   I2CS_STATE_IDLE, /**< State machine isn't doing anything. */
    I2CS_STATE_CHECK_ADDRESS, /**< Checking address to see if it involves self. */
    I2CS_STATE_CHECK_REPLY_FROM_SEND_DATA, /**< Checking to see if send data worked. */
    I2CS_STATE_SEND_DATA, /**< Send data. */
@@ -20,7 +19,7 @@ typedef enum i2cs_state_e {
 
 
 static uint8_t i2cs_address = 0x00; /**< Default slave address. */
-static i2cs_state_t i2cs_overflow_state = I2CS_STATE_IDLE; /**< Current state. */
+static i2cs_state_t i2cs_overflow_state = I2CS_STATE_CHECK_ADDRESS; /**< Current state. */
 
 
 /*
@@ -111,14 +110,15 @@ void i2cs_init (void)
    /* Enable Start Condition Interrupt. Disable Overflow Interrupt. */
    USICR = _BV(USISIE) | /* _BV(USIOIE) | */
            /* Set USI in Two-wire mode. No USI Counter overflow prior
-            * to first Start Condition (potentail failure) */
+            * to first Start Condition (potential failure). */
            _BV(USIWM1) | /*_BV(USIWM0) |*/
            /* Shift Register Clock Source = External, positive edge */
            _BV(USICS1) | /*_BV(USICS0) | _BV(USICLK) |*/
            /*_BV(USITC) | */ 0;
 
    /* Clear flags and reset counter. */
-   USISR = 0xF0;
+   USISR = _BV(USI_START_COND_INT) | _BV(USIOIF) | _BV(USIPF) | _BV(USIDC) |
+           (0x0<<USICNT0);
 
    /* Flush the buffers. */
    i2cs_rx_pos = 0x00;
@@ -132,16 +132,11 @@ void i2cs_init (void)
  */
 ISR(SIG_USI_START)
 {
-   uint8_t tmp;
-
-   /* Store volatile temporarily. */
-   tmp = USISR;
-
    /* Set default starting conditions for new I2C package. */
    i2cs_overflow_state = I2CS_STATE_CHECK_ADDRESS;
    DDR_USI  &= ~_BV(PORT_USI_SDA); /* Set SDA as input. */
    /* Wait for SCL to go low to ensure the "Start Condition" has completed. */
-   while ((PIN_USI & _BV(PORT_USI_SCL)) & !(tmp & _BV(USIPF)));
+   while ((PIN_USI & _BV(PIN_USI_SCL)) && !(USISR & _BV(USIPF)));
    /* If a Stop condition arises then leave the interrupt to prevent waiting forever. */
    /* Enable Overflow and Start Condition Interrupt.
     * (Keep START condition interrupt to detect RESTART) */
@@ -163,8 +158,8 @@ ISR(SIG_USI_START)
  *
  * Basically three states:
  *  - address
- *  - write
  *  - read
+ *  - write
  */
 ISR(SIG_USI_OVERFLOW)
 {
@@ -261,14 +256,6 @@ ISR(SIG_USI_OVERFLOW)
 
          i2cs_overflow_state = I2CS_STATE_REQUEST_DATA;
          SET_USI_TO_SEND_ACK();
-         break;
-
-
-      /*
-       * Unused.
-       */
-
-      default:
          break;
    }
 }
