@@ -137,7 +137,7 @@ ISR(SIG_USI_START)
    while ((PIN_USI & _BV(PORT_USI_SCL)) & !(USISR & _BV(USIPF))); /* Wait for SCL to go low to ensure the "Start Condition" has completed. */
    /* If a Stop condition arises then leave the interrupt to prevent waiting forever. */
    /* Enable Overflow and Start Condition Interrupt.
-    * (Keep StartCondInt to detect RESTART) */
+    * (Keep START condition interrupt to detect RESTART) */
    USICR = (1<<USISIE) | (1<<USIOIE) |
            /* Set USI in Two-wire mode. */
            (1<<USIWM1) | (1<<USIWM0) |
@@ -169,6 +169,9 @@ ISR(SIG_USI_OVERFLOW)
 
       /* Check to see if is talking to us. */
       case I2CS_STATE_CHECK_ADDRESS:
+
+         /* We always have to listen to address 0x00 in write mode as a general
+          * reserved direction. */
          if ((USIDR == 0) || (( USIDR>>1 ) == i2cs_address)) {
             /* We get to send data. */
             if (USIDR & 0x01) {
