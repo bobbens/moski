@@ -1,5 +1,4 @@
 
-
 #include "motors.h"
 
 #include <avr/io.h>
@@ -10,11 +9,6 @@
  */
 static volatile int16_t mota = 0; /**< Motor A velocity. */
 static volatile int16_t motb = 0; /**< Motor B velocity. */
-#if 0
-static uint8_t mot_accel; /**< Motor acceleration. */
-static uint8_t mot_soft; /**< Soft start zone. */
-static uint8_t mot_soft_accel; /**< Soft start acceleration. */
-#endif
 
 
 /**
