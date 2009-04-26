@@ -59,7 +59,7 @@ SRC      := moski.c
 ASRC     := 
 GCCLIB   :=
 
-OBJS     := moski.o i2cs.o
+OBJS     := moski.o i2cs.o temp.o
 
 GDBINITFILE := gdbinit-$(PRG)
 

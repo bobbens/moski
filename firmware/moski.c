@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include "i2cs.h"
+#include "temp.h"
 
 
 static uint8_t moski_mode = 0x00; /**< Current operating mode. */
@@ -22,6 +23,7 @@ static uint8_t moski_mode = 0x00; /**< Current operating mode. */
 #define SCHED_ENCODER   (1<<1) /**< Run encoder update task. */
 #define SCHED_TEMP      (1<<2) /**< Run temp update task. */
 static uint8_t sched_flags = 0x00; /**< Scheduler flags. */
+static uint8_t sched_counter = 0x00; /**< Scheduler counter. */
 
 
 /*
@@ -70,6 +72,15 @@ static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer )
 ISR(SIG_OVERFLOW1)
 {
    /* Do some scheduler stuff here. */
+   /*
+   if (!(sched_counter % 3))
+      sched_flags |= SCHED_MOTORS;
+   if (!(sched_counter % 5))
+      sched_flags |= SCHED_ENCODER;
+   */
+   if (!(sched_counter % 25)) /* 40 Hz */
+      sched_flags |= SCHED_TEMP;
+   sched_counter = (sched_counter+1) % 100;
 
    /* Reset watchdog. */
    wdt_reset();
@@ -112,6 +123,9 @@ int main (void)
    /* Set sleep mode. */
    set_sleep_mode( SLEEP_MODE_IDLE );
 
+   /* Start the temperature subsystem. */
+   temp_init();
+
    /* Initialize the scheduler. */
    sched_init();
 
@@ -145,6 +159,7 @@ int main (void)
          }
          /* Temp task. */
          if (sched_flags & SCHED_TEMP) {
+            temp_start(); /* Start temperature conversion. */
          }
 
          /* Clear flags. */
