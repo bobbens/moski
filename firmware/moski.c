@@ -60,9 +60,13 @@ static uint8_t moski_read( uint8_t pos, uint8_t value )
 static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer )
 {
    (void) buf_len;
+   uint16_t temp;
 
-   buffer[0] = moski_mode;
-   return 1;
+   temp = temp_get();
+
+   buffer[0] = temp>>8;
+   buffer[1] = temp & 0xFF;
+   return 2;
 }
 
 
