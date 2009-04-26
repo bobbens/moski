@@ -11,6 +11,7 @@
 
 #include "i2cs.h"
 #include "temp.h"
+#include "motors.h"
 
 
 static uint8_t moski_mode = 0x00; /**< Current operating mode. */
@@ -129,6 +130,9 @@ int main (void)
 
    /* Start the temperature subsystem. */
    temp_init();
+
+   /* Start the motor subsystem. */
+   motors_init();
 
    /* Initialize the scheduler. */
    sched_init();

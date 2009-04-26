@@ -10,9 +10,11 @@
  */
 static volatile int16_t mota = 0; /**< Motor A velocity. */
 static volatile int16_t motb = 0; /**< Motor B velocity. */
+#if 0
 static uint8_t mot_accel; /**< Motor acceleration. */
 static uint8_t mot_soft; /**< Soft start zone. */
 static uint8_t mot_soft_accel; /**< Soft start acceleration. */
+#endif
 
 
 /**
@@ -21,7 +23,7 @@ static uint8_t mot_soft_accel; /**< Soft start acceleration. */
  * This routine will update the motors velocity based on the acceleration
  *  parameters.
  */
-static void motors_update (void)
+void motors_update (void)
 {
 }
 
