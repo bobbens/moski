@@ -109,6 +109,7 @@ static void sched_init (void)
          0; /* No actual PWM output. */
    TCCR1B = _BV(WGM13) | /* Phase and freq correct mode with OCR1A. */
          _BV(CS11); /* 8 prescaler */
+   TIMSK1 = _BV(TOIE1); /* Enable Timer1 overflow. */
    OCR1A  = 1250;
 }
 
