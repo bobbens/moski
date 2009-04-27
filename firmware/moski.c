@@ -1,6 +1,8 @@
 
 #include "moski.h"
 
+#include "global.h"
+
 #include <avr/io.h>
 #include <avr/wdt.h>
 #include <avr/sleep.h>

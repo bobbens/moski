@@ -1,5 +1,5 @@
 
-#include "moski.h"
+#include "global.h"
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
