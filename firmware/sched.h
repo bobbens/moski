@@ -15,4 +15,7 @@
 extern uint8_t sched_flags; /**< Scheduler flags. */
 
 
+__inline void sched_run (void);
+
+
 #endif /* SCHED_H */

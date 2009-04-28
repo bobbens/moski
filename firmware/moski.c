@@ -147,24 +147,6 @@ int main (void)
          /* Activate interrupts again. */
          sei();
 
-         /*
-          * Run tasks.
-          *
-          * Very important that the periodicity of the scheduler update task
-          *  allows this to finish or the loss of task execution may occur.
-          */
-         /* Motor task. */
-         if (sched_flags & SCHED_MOTORS) {
-            sched_flags &= ~SCHED_MOTORS; /* Clear flag. */
-            /* Run after clearing flag in case needs to run again. */
-            motors_update();
-         }
-         /* Temp task. */
-         if (sched_flags & SCHED_TEMP) {
-            sched_flags &= ~SCHED_TEMP; /* Clear flag. */
-            /* Run after clearing flag in case needs to run again. */
-            temp_start(); /* Start temperature conversion. */
-         }
       }
       /* Reactivate interrupts and do nothing. */
       else
