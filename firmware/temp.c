@@ -30,7 +30,7 @@ void temp_init (void)
 /**
  * @brief Starts an ADC conversion.
  */
-void temp_start (void)
+__inline void temp_start (void)
 {
    ADCSRA |= _BV(ADSC);
 }

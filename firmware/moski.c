@@ -11,6 +11,7 @@
 
 #include <stdint.h>
 
+#include "sched.h"
 #include "i2cs.h"
 #include "temp.h"
 #include "motors.h"
@@ -22,10 +23,6 @@ static uint8_t moski_mode = 0x00; /**< Current operating mode. */
 /*
  * Scheduler.
  */
-#define SCHED_MOTORS    (1<<0) /**< Run motor update task. */
-#define SCHED_ENCODER   (1<<1) /**< Run encoder update task. */
-#define SCHED_TEMP      (1<<2) /**< Run temp update task. */
-static uint8_t sched_flags = 0x00; /**< Scheduler flags. */
 static uint8_t sched_counter = 0x00; /**< Scheduler counter. */
 
 
@@ -34,7 +31,7 @@ static uint8_t sched_counter = 0x00; /**< Scheduler counter. */
  */
 static uint8_t moski_read( uint8_t pos, uint8_t value );
 static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer );
-static void sched_init (void);
+static __inline void sched_init (void);
 
 
 /**
@@ -79,12 +76,6 @@ static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer )
 ISR(SIG_OVERFLOW1)
 {
    /* Do some scheduler stuff here. */
-   /*
-   if (!(sched_counter % 3))
-      sched_flags |= SCHED_MOTORS;
-   if (!(sched_counter % 5))
-      sched_flags |= SCHED_ENCODER;
-   */
    if (!(sched_counter % 25)) /* 40 Hz */
       sched_flags |= SCHED_TEMP;
    sched_counter = (sched_counter+1) % 100;
@@ -97,7 +88,7 @@ ISR(SIG_OVERFLOW1)
 /**
  * @brief Initializes the scheduler on Timer1.
  */
-static void sched_init (void)
+static __inline void sched_init (void)
 {
    /* Phase and freq correct mode.
     *
@@ -164,17 +155,16 @@ int main (void)
           */
          /* Motor task. */
          if (sched_flags & SCHED_MOTORS) {
-         }
-         /* Encoder task. */
-         if (sched_flags & SCHED_ENCODER) {
+            sched_flags &= ~SCHED_MOTORS; /* Clear flag. */
+            /* Run after clearing flag in case needs to run again. */
+            motors_update();
          }
          /* Temp task. */
          if (sched_flags & SCHED_TEMP) {
+            sched_flags &= ~SCHED_TEMP; /* Clear flag. */
+            /* Run after clearing flag in case needs to run again. */
             temp_start(); /* Start temperature conversion. */
          }
-
-         /* Clear flags. */
-         sched_flags = 0x00;
       }
       /* Reactivate interrupts and do nothing. */
       else

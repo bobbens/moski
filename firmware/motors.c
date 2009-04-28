@@ -2,13 +2,24 @@
 #include "motors.h"
 
 #include <avr/io.h>
+#include <avr/interrupt.h>
+
+#include "sched.h"
+
+
+/**
+ * @brief Motor control structure.
+ */
+typedef struct motor_s {
+   int16_t target; /**< Target velocity. */
+} motor_t;
 
 
 /*
  * Motor velocity.
  */
-static volatile int16_t mota = 0; /**< Motor A velocity. */
-static volatile int16_t motb = 0; /**< Motor B velocity. */
+static motor_t mota; /**< Motor A. */
+static motor_t motb; /**< Motor B. */
 
 
 /**
@@ -17,8 +28,18 @@ static volatile int16_t motb = 0; /**< Motor B velocity. */
  * This routine will update the motors velocity based on the acceleration
  *  parameters.
  */
-void motors_update (void)
+__inline void motors_update (void)
 {
+}
+
+
+/**
+ * @brief Timer0 overflow, handles the scheduling of the motors.
+ */
+ISR(SIG_OVERFLOW0)
+{
+   /* Set the motor task to run. */
+   sched_flags |= SCHED_MOTORS;
 }
 
 
@@ -34,10 +55,10 @@ void motors_update (void)
  *    @param motor_a Velocity to set Motor A to.
  *    @param motor_b Velocity to set Motor B to.
  */
-void motors_set( int16_t motor_a, int16_t motor_b )
+__inline void motors_set( int16_t motor_a, int16_t motor_b )
 {
-   mota = motor_a;
-   motb = motor_b;
+   mota.target = motor_a;
+   motb.target = motor_b;
 }
 
 
@@ -62,6 +83,7 @@ void motors_init (void)
    TCCR0A = _BV(WGM00) | _BV(WGM01) | /* Fast PWM mode. */
             _BV(COM0A1); /* Non-inverting mode. */
    TCCR0B = _BV(CS01)  | _BV(CS00); /* 64 prescaler */
+   TIMSK0 = _BV(TOIE0); /* Enable overflow interrupt on timer 0. */
    /* Start both motors stopped. */
    OCR0A  = 0;
    OCR0B  = 0;

@@ -4,7 +4,7 @@
 
 
 void temp_init (void);
-void temp_start (void);
+__inline void temp_start (void);
 uint16_t temp_get (void);
 
 

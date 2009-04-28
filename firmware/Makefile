@@ -16,7 +16,8 @@ AVRDUDE_PORT         := /dev/parport0
 #
 CC       := avr-gcc
 OPTLEVEL := s
-CFLAGS   :=	-g						\
+CFLAGS   := \
+         -g 						\
 		   -mmcu=$(MCU)			\
 		   -O$(OPTLEVEL)			\
 		   -fpack-struct			\
@@ -60,7 +61,7 @@ SRC      := moski.c
 ASRC     := 
 GCCLIB   :=
 
-OBJS     := moski.o i2cs.o temp.o motors.o
+OBJS     := moski.o i2cs.o temp.o motors.o sched.o
 
 GDBINITFILE := gdbinit-$(PRG)
 
