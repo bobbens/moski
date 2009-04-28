@@ -25,8 +25,20 @@ static motor_t motb; /**< Motor B. */
 /**
  * @brief Update routine for motors.
  *
- * This routine will update the motors velocity based on the acceleration
- *  parameters.
+ * This routine will update the motor based on the current control model.
+ *
+ *         +-----------+      Ts /              +-----------+
+ *         |  Ts * Ki  |        /     +-----+   |     K     |
+ * --(+)-->| --------- |--(+)--/   -->| Zoh |-->| --------- |---+-->
+ *    |    |   z - 1   |   |          +-----+   | t * s + 1 |   |
+ *    |    +-----------+   |                    +-----------+   |
+ *    |                    |                                    |
+ *    |                 +------+                                | 
+ *    |                 |  Kp  |                                |
+ *    |                 +------+                                |
+ *    |                    |                                    |
+ *    +--------------------+------------------------------------+
+ *
  */
 __inline void motors_update (void)
 {
