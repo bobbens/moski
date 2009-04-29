@@ -1,6 +1,8 @@
 
 #include "motors.h"
 
+#include "encoders.h"
+
 #include <avr/io.h>
 
 
@@ -65,6 +67,9 @@ void motors_init (void)
    /* Start both motors stopped. */
    OCR0A  = 0;
    OCR0B  = 0;
+
+   /* Initialize encoders. */
+   encoders_init();
 }
 
 
