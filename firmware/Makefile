@@ -57,11 +57,11 @@ PROJECT  := moski
 
 PRG      := $(PROJECT)
 
-SRC      := moski.c
+SRC      := moski.c i2cs.c temp.c motors.c encoders.c sched.c
 ASRC     := 
 GCCLIB   :=
 
-OBJS     := moski.o i2cs.o temp.o motors.o sched.o
+OBJS     := $(patsubst %.c,%.o,$(SRC))
 
 GDBINITFILE := gdbinit-$(PRG)
 
