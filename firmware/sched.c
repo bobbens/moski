@@ -22,6 +22,12 @@ uint8_t sched_flags = 0x00; /**< Scheduler flags. */
  */
 __inline void sched_run (void)
 {
+   uint8_t flags;
+
+   /* Store temporary flags and reset real flags in case we run a bit late. */
+   flags = sched_flags;
+   sched_flags = 0;
+
    /*
     * Run tasks.
     *
@@ -29,16 +35,10 @@ __inline void sched_run (void)
     *  allows this to finish or the loss of task execution may occur.
     */
    /* Motor task. */
-   if (sched_flags & SCHED_MOTORS) {
-      sched_flags &= ~SCHED_MOTORS; /* Clear flag. */
-      /* Run after clearing flag in case needs to run again. */
-      motors_update();
-   }
+   if (flags & SCHED_MOTORS)
+      motors_control();
    /* Temp task. */
-   if (sched_flags & SCHED_TEMP) {
-      sched_flags &= ~SCHED_TEMP; /* Clear flag. */
-      /* Run after clearing flag in case needs to run again. */
+   if (flags & SCHED_TEMP)
       temp_start(); /* Start temperature conversion. */
-   }
 }
 
