@@ -13,7 +13,17 @@
  * @brief Motor control structure.
  */
 typedef struct motor_s {
-   int16_t target; /**< Target velocity. */
+
+   /* Current motor parameters. */
+   int dir; /**< Target direction. */
+   uint16_t target; /**< Target velocity. */
+
+   /* Controller parameters. */
+   uint16_t Ki; /**< Integral parameter. */
+   uint16_t Kp; /**< Proportional parameter. */
+
+   /* Controller status data. */
+   uint16_t integral; /**< Integral accumulator. */
 } motor_t;
 
 
@@ -24,15 +34,22 @@ static motor_t mota; /**< Motor A. */
 static motor_t motb; /**< Motor B. */
 
 
+/*
+ * Prototypes.
+ */
+static __inline uint8_t motor_control( motor_t *mot, uint8_t feedback );
+static __inline void motor_set( motor_t *motor, int16_t target );
+
+
 /**
- * @brief Update routine for motors.
+ * @brief Control routine for a motor.
  *
  * This routine will update the motor based on the current control model.
  *
  *         +-----------+      Ts /              +-----------+
- *         |  Ts * Ki  |        /     +-----+   |     K     |
+ *  +      |  Ts * Ki  | +      /     +-----+   |     K     |
  * --(+)-->| --------- |--(+)--/   -->| Zoh |-->| --------- |---+-->
- *    |    |   z - 1   |   |          +-----+   | t * s + 1 |   |
+ *   -|    |   z - 1   |  +|          +-----+   | t * s + 1 |   |
  *    |    +-----------+   |                    +-----------+   |
  *    |                    |                                    |
  *    |                 +------+                                | 
@@ -42,9 +59,51 @@ static motor_t motb; /**< Motor B. */
  *    +--------------------+-------------|  n  |----   \--------+
  *                                       +-----+
  *
+ * @note Using 16 bit numbers for calculations using 8 bits for the significant
+ *       numbers and 8 bits for the "decimals".
+ */
+static __inline uint8_t motor_control( motor_t *mot, uint8_t feedback )
+{
+   uint16_t rpm_feedback, err, output, cmd;
+
+   /* Get target velocity. */
+   rpm_feedback   = feedback << 8;
+
+   /* Calculate error. */
+   err            = mot->target - rpm_feedback;
+
+   /* Calculate proportional part. */
+   output         = err * mot->Kp;
+
+   /* Calculate integral part. */
+   mot->integral += err;
+   output        *= mot->integral * mot->Ki;
+
+   /* Set command. */
+   cmd            = output >> 8;
+   
+   return cmd;
+}
+
+
+/**
+ * @brief Runs the control routine on both motors.
  */
 __inline void motors_control (void)
 {
+   uint8_t enca, encb;
+
+   /* Store encoder values and reset counters atomically. */
+   cli();
+   enca        = encoder_a;
+   encoder_a   = 0;
+   encb        = encoder_b;
+   encoder_b   = 0;
+   sei();
+
+   /* Do motor control. */
+   OCR0A = motor_control( &mota, enca );
+   OCR0B = motor_control( &motb, encb );
 }
 
 
@@ -59,21 +118,40 @@ ISR(SIG_OVERFLOW0)
 
 
 /**
+ * @brief Sets the motor target.
+ */
+static __inline void motor_set( motor_t *mot, int16_t target )
+{
+   uint32_t buf;
+
+   /* Calculate target. */
+   buf   = (target < 0) ? -target : target; /* Get absolute target. */
+   buf  *= ENCODER_NUM; /* Multiply by encoder factor. */
+   buf <<= 8; /* Shift to use bits as decimals. */
+   buf  /= MOTOR_CONTROL_HZ; /* Divide keeping decimals. */
+
+   /* Set target. */
+   mot->dir    = (target < 0) ? 1 : 0;
+   mot->target = (uint16_t)buf; /* Cast away sign. */
+}
+
+
+/**
  * @brief Sets the motors.
  *
  * Sign determines direction of rotations:
  *  - Positive is forward.
  *  - Negative is backwards.
  *
- * Value in absolute should be between 0 and 10000.
+ * Value in absolute should be in RPM.
  *
  *    @param motor_a Velocity to set Motor A to.
  *    @param motor_b Velocity to set Motor B to.
  */
 __inline void motors_set( int16_t motor_a, int16_t motor_b )
 {
-   mota.target = motor_a;
-   motb.target = motor_b;
+   motor_set( &mota, motor_a );
+   motor_set( &motb, motor_b );
 }
 
 

@@ -7,6 +7,9 @@
 #include <stdint.h>
 
 
+#define MOTOR_CONTROL_HZ      1220 /**< Motor control frequency. */
+
+
 /*
  * Initialization.
  */
