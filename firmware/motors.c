@@ -13,14 +13,15 @@
  * @brief Motor control structure.
  */
 typedef struct motor_s {
-
    /* Current motor parameters. */
    int dir; /**< Target direction. */
    uint16_t target; /**< Target velocity. */
+   uint8_t cmd; /**< Next command (delayed one cycle). */
 
    /* Controller parameters. */
    uint16_t Ki; /**< Integral parameter. */
    uint16_t Kp; /**< Proportional parameter. */
+   uint16_t windup; /**< Windup limit. */
 
    /* Controller status data. */
    uint16_t integral; /**< Integral accumulator. */
@@ -37,8 +38,8 @@ static motor_t motb; /**< Motor B. */
 /*
  * Prototypes.
  */
-static __inline uint8_t motor_control( motor_t *mot, uint8_t feedback );
-static __inline void motor_set( motor_t *motor, int16_t target );
+static uint8_t motor_control( motor_t *mot, uint8_t feedback );
+static void motor_set( motor_t *motor, int16_t target );
 
 
 /**
@@ -62,7 +63,7 @@ static __inline void motor_set( motor_t *motor, int16_t target );
  * @note Using 16 bit numbers for calculations using 8 bits for the significant
  *       numbers and 8 bits for the "decimals".
  */
-static __inline uint8_t motor_control( motor_t *mot, uint8_t feedback )
+static uint8_t motor_control( motor_t *mot, uint8_t feedback )
 {
    uint16_t rpm_feedback, err, output, cmd;
 
@@ -72,12 +73,15 @@ static __inline uint8_t motor_control( motor_t *mot, uint8_t feedback )
    /* Calculate error. */
    err            = mot->target - rpm_feedback;
 
-   /* Calculate proportional part. */
-   output         = err * mot->Kp;
-
    /* Calculate integral part. */
    mot->integral += err;
-   output        *= mot->integral * mot->Ki;
+   /* Anti-windup. */
+   if (mot->integral > mot->windup)
+      mot->integral = mot->windup;
+   output         = mot->integral * mot->Ki;
+
+   /* Calculate proportional part. */
+   output        += rpm_feedback * mot->Kp;
 
    /* Set command. */
    cmd            = output >> 8;
@@ -101,9 +105,9 @@ __inline void motors_control (void)
    encoder_b   = 0;
    sei();
 
-   /* Do motor control. */
-   OCR0A = motor_control( &mota, enca );
-   OCR0B = motor_control( &motb, encb );
+   /* Get next target. */
+   mota.cmd = motor_control( &mota, enca );
+   motb.cmd = motor_control( &motb, encb );
 }
 
 
@@ -114,19 +118,22 @@ ISR(SIG_OVERFLOW0)
 {
    /* Set the motor task to run. */
    sched_flags |= SCHED_MOTORS;
+
+   /* Set last target (one cycle delay). */
+   OCR0A = mota.cmd;
+   OCR0B = motb.cmd;
 }
 
 
 /**
  * @brief Sets the motor target.
  */
-static __inline void motor_set( motor_t *mot, int16_t target )
+static void motor_set( motor_t *mot, int16_t target )
 {
    uint32_t buf;
 
    /* Calculate target. */
    buf   = (target < 0) ? -target : target; /* Get absolute target. */
-   buf  *= ENCODER_NUM; /* Multiply by encoder factor. */
    buf <<= 8; /* Shift to use bits as decimals. */
    buf  /= MOTOR_CONTROL_HZ; /* Divide keeping decimals. */
 
@@ -148,7 +155,7 @@ static __inline void motor_set( motor_t *mot, int16_t target )
  *    @param motor_a Velocity to set Motor A to.
  *    @param motor_b Velocity to set Motor B to.
  */
-__inline void motors_set( int16_t motor_a, int16_t motor_b )
+void motors_set( int16_t motor_a, int16_t motor_b )
 {
    motor_set( &mota, motor_a );
    motor_set( &motb, motor_b );
