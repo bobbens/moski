@@ -17,7 +17,7 @@
 #include "motors.h"
 
 
-static uint8_t moski_mode = 0x00; /**< Current operating mode. */
+static uint8_t moski_mode = MOSKI_MODE_OPEN; /**< Current operating mode. */
 
 
 /*
@@ -133,6 +133,9 @@ int main (void)
 {
    /* Disable watchdog timer since it doesn't always get reset on restart. */
    wdt_disable();
+
+   /* Set up default mode. */
+   moski_mode = MOSKI_MODE_OPEN;
 
    /* Set up communication. */
    i2cs_setAddress( 0x09 );
