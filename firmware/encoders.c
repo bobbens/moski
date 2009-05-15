@@ -8,9 +8,9 @@
 #include <avr/interrupt.h>
 
 
-volatile uint8_t encoder_a   = 0; /**< Counter on encoder A. */
+volatile uint8_t encoder_a    = 0; /**< Counter on encoder A. */
 static uint8_t encoder_pin_a  = 0; /**< Current status of encoder A. */
-volatile uint8_t encoder_b   = 0; /**< Counter on encoder B. */
+volatile uint8_t encoder_b    = 0; /**< Counter on encoder B. */
 static uint8_t encoder_pin_b  = 0; /**< Current status of encoder B. */
 
 

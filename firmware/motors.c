@@ -14,9 +14,12 @@
  */
 typedef struct motor_s {
    /* Current motor parameters. */
-   int dir; /**< Target direction. */
+   int dir; /**< Target direction, 0 = forward, 1 = backwards. */
    uint16_t target; /**< Target velocity. */
    uint8_t cmd; /**< Next command (delayed one cycle). */
+
+   /* Feedback. */
+   int16_t vel; /**< Current motor velocity. */
 
    /* Controller parameters. */
    uint16_t Ki; /**< Integral parameter. */
@@ -65,7 +68,12 @@ static void motor_set( motor_t *motor, int16_t target );
  */
 static uint8_t motor_control( motor_t *mot, uint8_t feedback )
 {
+   /* unsigned short sat accum */
    uint16_t rpm_feedback, err, output, cmd;
+
+   /* Save velocity. */
+   mot->vel       = (mot->dir) ? -feedback : feedback;
+   mot->vel      *= MOTOR_CONTROL_HZ;
 
    /* Get target velocity. */
    rpm_feedback   = feedback << 8;
@@ -159,6 +167,19 @@ void motors_set( int16_t motor_a, int16_t motor_b )
 {
    motor_set( &mota, motor_a );
    motor_set( &motb, motor_b );
+}
+
+
+/**
+ * @brief Gets the current motor velocity.
+ *
+ *    @param[out] motor_a Velocity on motor A.
+ *    @param[out] motor_b Velocity on motor B.
+ */
+void motors_get( int16_t *motor_a, int16_t *motor_b )
+{
+   *motor_a = mota.vel;
+   *motor_b = motb.vel;
 }
 
 

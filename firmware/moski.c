@@ -34,6 +34,7 @@ static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer );
 static __inline void sched_init (void);
 
 
+static uint8_t read_buf[4]; /**< Small buf to help moski_read. */
 /**
  * @brief Master read function for the Moski.
  *
@@ -43,9 +44,20 @@ static __inline void sched_init (void);
  */
 static uint8_t moski_read( uint8_t pos, uint8_t value )
 {
-   (void) pos;
+   int i;
+   int16_t a,b;
 
-   moski_mode = value;
+   /* Fill buffer. */
+   i = pos % 4;
+   read_buf[i] = value;
+   
+   /* Send to motors. */
+   if (i==3) {
+      a = (read_buf[0]<<8) + read_buf[1];
+      b = (read_buf[2]<<8) + read_buf[3];
+      motors_set( a, b );
+   }
+
    return 0;
 }
 
@@ -61,12 +73,21 @@ static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer )
 {
    (void) buf_len;
    uint16_t temp;
+   int16_t motor_a, motor_b;
 
+   /* Get stuff. */
+   motors_get( &motor_a, &motor_b );
    temp = temp_get();
 
-   buffer[0] = temp>>8;
-   buffer[1] = temp & 0xFF;
-   return 2;
+   /* Set up the data. */
+   buffer[0] = motor_a>>8;
+   buffer[1] = motor_a & 0xFF;
+   buffer[2] = motor_b>>8;
+   buffer[3] = motor_b & 0xFF;
+   buffer[4] = temp>>8;
+   buffer[5] = temp & 0xFF;
+
+   return 6;
 }
 
 
