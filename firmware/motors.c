@@ -7,6 +7,7 @@
 #include <avr/interrupt.h>
 
 #include "sched.h"
+#include "mode.h"
 
 
 /**
@@ -113,9 +114,16 @@ __inline void motors_control (void)
    encoder_b   = 0;
    sei();
 
-   /* Get next target. */
-   mota.cmd = motor_control( &mota, enca );
-   motb.cmd = motor_control( &motb, encb );
+   /* Control loop. */
+   if (moski_mode == MOSKI_MODE_CONTROL) {
+      mota.cmd = motor_control( &mota, enca );
+      motb.cmd = motor_control( &motb, encb );
+   }
+   /* Open loop. */
+   else if (moski_mode == MOSKI_MODE_OPEN) {
+      mota.cmd = mota.target>>8;
+      motb.cmd = motb.target>>8;
+   }
 }
 
 
@@ -208,6 +216,10 @@ void motors_init (void)
    /* Start both motors stopped. */
    OCR0A  = 0;
    OCR0B  = 0;
+
+   /* Clear targets. */
+   mota.target = 0;
+   motb.target = 0;
 
    /* Initialize encoders. */
    encoders_init();

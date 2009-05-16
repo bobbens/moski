@@ -17,7 +17,7 @@
 #include "motors.h"
 
 
-static uint8_t moski_mode = MOSKI_MODE_OPEN; /**< Current operating mode. */
+uint8_t moski_mode = MOSKI_MODE_OPEN; /**< Current operating mode. */
 
 
 /*
@@ -47,8 +47,14 @@ static uint8_t moski_read( uint8_t pos, uint8_t value )
    int i;
    int16_t a,b;
 
+   /* First byte is always position. */
+   if (pos == 0) {
+      moski_mode = pos;
+      return 0;
+   }
+
    /* Fill buffer. */
-   i = pos % 4;
+   i = (pos-1) % 4;
    read_buf[i] = value;
    
    /* Send to motors. */
