@@ -14,7 +14,8 @@ typedef enum i2cs_state_e {
    I2CS_STATE_SEND_DATA, /**< Send data. */
    I2CS_STATE_REQUEST_REPLY_FROM_SEND_DATA, /**< Ask to see if send data worked. */
    I2CS_STATE_REQUEST_DATA, /**< Request data. */
-   I2CS_STATE_GET_DATA_AND_SEND_ACK /**< Get data. */
+   I2CS_STATE_GET_DATA_AND_SEND_ACK, /**< Get data. */
+   I2CS_STATE_ABORT /**< Stops communication. */
 } i2cs_state_t;
 
 
@@ -68,13 +69,14 @@ static uint8_t i2cs_tx_len = 0x00; /**< Current length of data within the TX buf
 }
 #define SET_USI_TO_I2C_START_CONDITION_MODE() \
 { \
+   DDR_USI &= ~_BV(PORT_USI_SDA); /* Set SDA as input. */ \
    USICR = (1<<USISIE) | /* Enable start condition. */ \
            (0<<USIOIE) | /* Disable overflow interrupt. */ \
            (1<<USIWM1) | (0<<USIWM0) | /* Set USI in two-wire mode,
                                           with no overflow hold. */ \
            /* Shift register clock source = externel, positive edge. */ \
            (1<<USICS1) | (0<<USICS0) | (0<<USICLK) | (0<<USITC); \
-   USISR = (0<<USI_START_COND_INT) | /* Clear all flags except start cond. */ \
+   USISR = (1<<USI_START_COND_INT) | /* Clear all flags except start cond. */ \
            (1<<USIOIF) | (1<<USIPF) | (1<<USIDC) | (0x0<<USICNT0); \
 }
 #define SET_USI_TO_SEND_DATA() \
@@ -156,10 +158,11 @@ ISR(SIG_USI_START)
 /**
  * @brief ISR for the i2c overflow.
  *
- * Basically three states:
+ * Basically four states:
  *  - address
  *  - read
  *  - write
+ *  - misc
  */
 ISR(SIG_USI_OVERFLOW)
 {
@@ -250,12 +253,23 @@ ISR(SIG_USI_OVERFLOW)
      case I2CS_STATE_GET_DATA_AND_SEND_ACK:
          /* Copy data. */
          if (i2cs_read_callback( i2cs_rx_pos++, USIDR )) {
+            i2cs_overflow_state = I2CS_STATE_ABORT;
             SET_USI_TO_SEND_NACK();
             return;
          }
 
          i2cs_overflow_state = I2CS_STATE_REQUEST_DATA;
          SET_USI_TO_SEND_ACK();
+         break;
+
+
+      /*
+       * Misc functions.
+       */
+
+      /* Resets the connection. */
+      case I2CS_STATE_ABORT:
+         SET_USI_TO_I2C_START_CONDITION_MODE();
          break;
    }
 }
