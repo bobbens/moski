@@ -76,7 +76,7 @@ static uint8_t i2cs_tx_len = 0x00; /**< Current length of data within the TX buf
                                           with no overflow hold. */ \
            /* Shift register clock source = externel, positive edge. */ \
            (1<<USICS1) | (0<<USICS0) | (0<<USICLK) | (0<<USITC); \
-   USISR = (1<<USI_START_COND_INT) | /* Clear all flags except start cond. */ \
+   USISR = (0<<USI_START_COND_INT) | /* Clear all flags except start cond. */ \
            (1<<USIOIF) | (1<<USIPF) | (1<<USIDC) | (0x0<<USICNT0); \
 }
 #define SET_USI_TO_SEND_DATA() \
@@ -166,12 +166,6 @@ ISR(SIG_USI_START)
  */
 ISR(SIG_USI_OVERFLOW)
 {
-   /* Saw collision, abort. */
-   if (USISR & _BV(USIDC)) {
-      SET_USI_TO_I2C_START_CONDITION_MODE();
-      return;
-   }
-
    /* Handle current state. */
    switch (i2cs_overflow_state) {
 
