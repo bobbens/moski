@@ -217,7 +217,7 @@ ISR(SIG_USI_OVERFLOW)
      /* Send data. */
      case I2CS_STATE_SEND_DATA:
          /* Get data from buffer. */
-         if (i2cs_tx_pos > i2cs_tx_len) { /* Out of data. */
+         if (i2cs_tx_pos >= i2cs_tx_len) { /* Out of data. */
             SET_USI_TO_I2C_START_CONDITION_MODE();
             return;
          }
