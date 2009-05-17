@@ -166,8 +166,8 @@ ISR(SIG_USI_START)
  */
 ISR(SIG_USI_OVERFLOW)
 {
-   /* Abort if stop condition recieved. */
-   if (USISR & _BV(USIPF)) {
+   /* Saw collision, abort. */
+   if (USISR & _BV(USIDC)) {
       SET_USI_TO_I2C_START_CONDITION_MODE();
       return;
    }
