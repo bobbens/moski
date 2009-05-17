@@ -44,6 +44,7 @@ static motor_t motb; /**< Motor B. */
  */
 static uint8_t motor_control( motor_t *mot, uint8_t feedback );
 static void motor_set( motor_t *motor, int16_t target );
+static void motor_init( motor_t *mot );
 
 
 /**
@@ -198,6 +199,23 @@ void motors_get( int16_t *motor_a, int16_t *motor_b )
 
 
 /**
+ * @brief Clears a motor.
+ */
+static void motor_init( motor_t *mot )
+{
+   mot->dir       = 0;
+   mot->target    = 0;
+   mot->cmd       = 0;
+
+   mot->vel       = 0;
+
+   /* @todo Load the parameters. */
+
+   mot->integral  = 0;
+}
+
+
+/**
  * @brief Initializes the motors.
  */
 void motors_init (void)
@@ -224,8 +242,8 @@ void motors_init (void)
    OCR0B  = 0;
 
    /* Clear targets. */
-   mota.target = 0;
-   motb.target = 0;
+   motor_init( &mota );
+   motor_init( &motb );
 
    /* Initialize encoders. */
    encoders_init();
