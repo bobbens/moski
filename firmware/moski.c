@@ -177,6 +177,8 @@ int main (void)
          /* Activate interrupts again. */
          sei();
 
+         /* Run scheduler. */
+         sched_run();
       }
       /* Reactivate interrupts and do nothing. */
       else
