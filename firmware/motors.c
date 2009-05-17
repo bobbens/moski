@@ -200,6 +200,8 @@ void motors_get( int16_t *motor_a, int16_t *motor_b )
 
 /**
  * @brief Clears a motor.
+ *
+ *    @param mot Motor to clear.
  */
 static void motor_init( motor_t *mot )
 {
