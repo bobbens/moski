@@ -192,8 +192,8 @@ void motors_get( int16_t *motor_a, int16_t *motor_b )
       *motor_b = motb.vel;
    }
    else if (moski_mode == MOSKI_MODE_OPEN) {
-      *motor_a = mota.cmd;
-      *motor_b = motb.cmd;
+      *motor_a = (int16_t)mota.cmd;
+      *motor_b = (int16_t)motb.cmd;
    }
 }
 
