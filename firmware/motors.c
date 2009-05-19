@@ -120,7 +120,11 @@ __inline void motors_control (void)
       mota.cmd = motor_control( &mota, enca );
       motb.cmd = motor_control( &motb, encb );
    }
-   /* Open loop has cmd already set. */
+   /* Open loop just sets velocity. */
+   else if (moski_mode == MOSKI_MODE_OPEN) {
+      mota.vel = enc_a;
+      motb.vel = enc_b;
+   }
 }
 
 
@@ -189,14 +193,8 @@ void motors_set( int16_t motor_a, int16_t motor_b )
  */
 void motors_get( int16_t *motor_a, int16_t *motor_b )
 {
-   if (moski_mode == MOSKI_MODE_CONTROL) {
-      *motor_a = mota.vel;
-      *motor_b = motb.vel;
-   }
-   else if (moski_mode == MOSKI_MODE_OPEN) {
-      *motor_a = mota.cmd;
-      *motor_b = motb.cmd;
-   }
+   *motor_a = mota.vel;
+   *motor_b = motb.vel;
 }
 
 
