@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include <avr/io.h>
+#include <avr/interrupt.h>
 
 #include "motors.h"
 #include "temp.h"
