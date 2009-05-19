@@ -47,7 +47,7 @@ uint16_t temp_get (void)
 
    tmp = cur_temp;
 
-   /** @todo FIR */
+   /** @TODO FIR */
 
    return tmp;
 }
