@@ -78,6 +78,7 @@ static uint8_t moski_read( uint8_t pos, uint8_t value )
 static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer )
 {
    (void) buf_len;
+#if 0
    uint16_t temp;
    int16_t motor_a, motor_b;
 
@@ -92,6 +93,11 @@ static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer )
    buffer[3] = motor_b & 0xFF;
    buffer[4] = temp>>8;
    buffer[5] = temp & 0xFF;
+#endif
+
+   int i;
+   for (i=0; i<6; i++)
+      buffer[i] = (i+1)*3;
 
    return 6;
 }
@@ -149,6 +155,7 @@ int main (void)
    i2cs_setWriteCallback( moski_write );
    i2cs_init();
 
+#if 0
    /* Set sleep mode. */
    set_sleep_mode( SLEEP_MODE_IDLE );
 
@@ -164,13 +171,14 @@ int main (void)
    /* Set up watchdog timer. */
    wdt_reset(); /* Just in case. */
    wdt_enable(WDTO_250MS);
+#endif
 
    /* Set interrupts. */
    sei();
 
    /* Main loop. */
    while (1) {
-
+#if 0
       /* Atomic test to see if has anything to do. */
       cli();
       if (sched_flags != 0x00) {
@@ -186,6 +194,7 @@ int main (void)
 
       /* Sleep until next interrupt. */
       sleep_mode();
+#endif
    }
 }
 
