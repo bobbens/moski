@@ -93,6 +93,8 @@ static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer )
    buffer[4] = temp>>8;
    buffer[5] = temp & 0xFF;
 
+   return 6;
+}
 
 
 /**
