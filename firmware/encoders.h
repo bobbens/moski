@@ -13,8 +13,8 @@
 #define ENCODER_INT_B      PCINT1   /**< Interrupt pin encoder B is on. */
 #define ENCODER_SIG        SIG_PIN_CHANGE0 /**< Interrupt vector for encoders. */
 
-#define ENCODER_DDR        DDRA     /**< DDR register for encoders. */
-#define ENCODER_PIN        PINA     /**< Pin encoders are on. */
+#define ENCODER_DDR        DDRB     /**< DDR register for encoders. */
+#define ENCODER_PIN        PINB     /**< Pin encoders are on. */
 #define ENCODER_PORT_A     PB0      /**< Encoder A port. */
 #define ENCODER_PORT_B     PB1      /**< Encoder B port. */
 #define ENCODER_PIN_A      ENCODER_PORT_A /**< Encoder A pin. */
