@@ -129,6 +129,9 @@ static __inline void sched_init (void)
          _BV(CS11); /* 8 prescaler */
    TIMSK1 = _BV(TOIE1); /* Enable Timer1 overflow. */
    OCR1A  = 1250;
+
+   /* Initialize flags. */
+   sched_flags = 0x00;
 }
 
 
@@ -164,9 +167,6 @@ int main (void)
    /* Set up watchdog timer. */
    wdt_reset(); /* Just in case. */
    wdt_enable(WDTO_250MS);
-
-   /* Set interrupts. */
-   sei();
 
    /* Main loop. */
    while (1) {

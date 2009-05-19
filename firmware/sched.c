@@ -14,7 +14,7 @@
 /*
  * Scheduler.
  */
-uint8_t sched_flags = 0x00; /**< Scheduler flags. */
+volatile uint8_t sched_flags = 0x00; /**< Scheduler flags. */
 
 
 /*
@@ -24,9 +24,11 @@ __inline void sched_run (void)
 {
    uint8_t flags;
 
-   /* Store temporary flags and reset real flags in case we run a bit late. */
+   /* Atomic store temporary flags and reset real flags in case we run a bit late. */
+   cli();
    flags = sched_flags;
    sched_flags = 0;
+   sei();
 
    /*
     * Run tasks.
@@ -37,8 +39,10 @@ __inline void sched_run (void)
    /* Motor task. */
    if (flags & SCHED_MOTORS)
       motors_control();
+#if 0
    /* Temp task. */
    if (flags & SCHED_TEMP)
       temp_start(); /* Start temperature conversion. */
+#endif
 }
 
