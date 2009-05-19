@@ -122,8 +122,8 @@ __inline void motors_control (void)
    }
    /* Open loop just sets velocity. */
    else if (moski_mode == MOSKI_MODE_OPEN) {
-      mota.vel = enc_a;
-      motb.vel = enc_b;
+      mota.vel = enca;
+      motb.vel = encb;
    }
 }
 
@@ -174,11 +174,11 @@ static void motor_set( motor_t *mot, int16_t target )
  */
 void motors_set( int16_t motor_a, int16_t motor_b )
 {
-   if (mode == MOSKI_MODE_CONTROL) {
+   if (moski_mode == MOSKI_MODE_CONTROL) {
       motor_set( &mota, motor_a );
       motor_set( &motb, motor_b );
    }
-   else if (mode == MOSKI_MODE_OPEN) {
+   else if (moski_mode == MOSKI_MODE_OPEN) {
       mota.cmd = motor_a & 0xFF;
       motb.cmd = motor_b & 0xFF;
    }
