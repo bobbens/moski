@@ -302,6 +302,9 @@ int main (void)
    /* Start the motor subsystem. */
    /*motors_init();*/
 
+   /* Initialize the encoders. */
+   encoders_init();
+
    /* Initialize the scheduler. */
    sched_init();
 
