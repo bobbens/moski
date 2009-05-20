@@ -158,7 +158,7 @@ static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer )
 static void encoder_init( encoder_t *enc, uint8_t pinstate )
 {
    enc->cur_tick  = 0;
-   enc->last_tick = 0;
+   enc->last_tick = UINT16_MAX; /* Consider stopped. */
    enc->pin_state = pinstate;
 }
 /**
