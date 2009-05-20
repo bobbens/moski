@@ -6,6 +6,11 @@
 
 #include <stdint.h>
 
+#include "moski_conf.h"
+
+
+#if MOSKI_USE_TEMP
+
 
 static volatile uint16_t cur_temp = 0; /**< Current temperature. */
 
@@ -61,3 +66,5 @@ ISR(SIG_ADC)
    cur_temp = (ADCH<<8) + ADCL;
 }
 
+
+#endif /* MOSKI_USE_TEMP */

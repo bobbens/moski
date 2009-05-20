@@ -11,6 +11,7 @@
 
 #include <stdint.h>
 
+#include "moski_conf.h"
 #include "sched.h"
 #include "i2cs.h"
 #include "temp.h"
@@ -78,20 +79,26 @@ static uint8_t moski_read( uint8_t pos, uint8_t value )
 static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer )
 {
    (void) buf_len;
-   uint16_t temp;
    int16_t motor_a, motor_b;
 
    /* Get stuff. */
    motors_get( &motor_a, &motor_b );
-   temp = temp_get();
 
    /* Set up the data. */
    buffer[0] = motor_a>>8;
    buffer[1] = motor_a & 0xFF;
    buffer[2] = motor_b>>8;
    buffer[3] = motor_b & 0xFF;
+
+#if MOSKI_USE_TEMP
+   uint16_t temp;
+   temp = temp_get();
    buffer[4] = temp>>8;
    buffer[5] = temp & 0xFF;
+#else /* MOSKI_USE_TEMP */
+   buffer[4] = 0;
+   buffer[5] = 0;
+#endif /* MOSKI_USE_TEMP */
 
    return 6;
 }
@@ -156,7 +163,9 @@ int main (void)
    set_sleep_mode( SLEEP_MODE_IDLE );
 
    /* Start the temperature subsystem. */
+#if MOSKI_USE_TEMP
    temp_init();
+#endif /* MOSKI_USE_TEMP */
 
    /* Start the motor subsystem. */
    motors_init();

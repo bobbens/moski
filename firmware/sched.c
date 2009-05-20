@@ -8,6 +8,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+#include "moski_conf.h"
 #include "motors.h"
 #include "temp.h"
 
@@ -40,10 +41,10 @@ __inline void sched_run (void)
    /* Motor task. */
    if (flags & SCHED_MOTORS)
       motors_control();
-#if 0
+#if MOSKI_USE_TEMP
    /* Temp task. */
    if (flags & SCHED_TEMP)
       temp_start(); /* Start temperature conversion. */
-#endif
+#endif /* MOSKI_USE_TEMP */
 }
 
