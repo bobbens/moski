@@ -66,7 +66,7 @@ static uint8_t moski_read( uint8_t pos, uint8_t value );
 static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer );
 /* Scheduler. */
 static __inline void sched_init (void);
-static __inline void sched_run (void);
+static __inline void sched_run( uint8_t flags );
 /* Encoders. */
 static void encoder_init( encoder_t *enc, uint8_t pinstate );
 static __inline void encoders_init (void);
@@ -117,16 +117,12 @@ static uint8_t moski_read( uint8_t pos, uint8_t value )
 static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer )
 {
    (void) buf_len;
-   int16_t motor_a, motor_b;
-
-   /* Get stuff. */
-   /*motors_get( &motor_a, &motor_b );*/
 
    /* Set up the data. */
-   buffer[0] = motor_a>>8;
-   buffer[1] = motor_a & 0xFF;
-   buffer[2] = motor_b>>8;
-   buffer[3] = motor_b & 0xFF;
+   buffer[0] = encA.last_tick >> 8;
+   buffer[1] = encA.last_tick;
+   buffer[2] = encB.last_tick >> 8;
+   buffer[3] = encB.last_tick;
 
 #if MOSKI_USE_TEMP
    uint16_t temp;
@@ -250,16 +246,8 @@ static __inline void sched_init (void)
 /**
  * @brief Runs the scheduler.
  */
-static __inline void sched_run (void)
+static __inline void sched_run( uint8_t flags )
 {  
-   uint8_t flags;
-   
-   /* Atomic store temporary flags and reset real flags in case we run a bit late. */
-   cli();
-   flags = sched_flags;
-   sched_flags = 0;
-   sei();
-   
    /*
     * Run tasks.
     *
@@ -267,6 +255,7 @@ static __inline void sched_run (void)
     *  allows this to finish or the loss of task execution may occur.
     */
    /* Motor task. */
+   (void) flags;
    /*if (flags & SCHED_MOTORS)
       motors_control();*/
 #if MOSKI_USE_TEMP
@@ -283,6 +272,8 @@ static __inline void sched_run (void)
  */
 int main (void)
 {
+   uint8_t flags;
+
    /* Disable watchdog timer since it doesn't always get reset on restart. */
    wdt_disable();
 
@@ -318,11 +309,14 @@ int main (void)
       /* Atomic test to see if has anything to do. */
       cli();
       if (sched_flags != 0x00) {
-         /* Activate interrupts again. */
-         sei();
+   
+         /* Atomic store temporary flags and reset real flags in case we run a bit late. */
+         flags = sched_flags;
+         sched_flags = 0;
+         sei(); /* Restart interrupts. */
 
          /* Run scheduler. */
-         sched_run();
+         sched_run( flags );
       }
       /* Reactivate interrupts and do nothing. */
       else
