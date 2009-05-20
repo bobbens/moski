@@ -12,27 +12,65 @@
 #include <stdint.h>
 
 #include "moski_conf.h"
-#include "sched.h"
 #include "i2cs.h"
-#include "temp.h"
-#include "motors.h"
 
 
+/*
+ * Scheduler defines.
+ */
+/*
+ * Scheduler divider.  Formula is:
+ *
+ *  f_task = f_sched * DIVIDER / DIVIDER_MAX
+ *
+ * Example
+ *  100 Hz = 20 kHz * 5 / 1000
+ */
+#define SCHED_MOTOR_DIVIDER   40
+#define SCHED_TEMP_DIVIDER    1
+#define SCHED_MAX_DIVIDER     100
+/* Scheduler state flags. */
+#define SCHED_MOTORS          (1<<0)
+#define SCHED_TEMP            (1<<1)
+
+
+/**
+ * Operating mode.
+ */
 uint8_t moski_mode = MOSKI_MODE_OPEN; /**< Current operating mode. */
 
 
 /*
  * Scheduler.
  */
-static uint8_t sched_counter = 0x00; /**< Scheduler counter. */
+static uint16_t sched_counter = 0x00; /**< Scheduler counter. */
+static uint8_t  sched_flags   = 0x00; /**< Scheduler flags. */
+
+
+/*
+ * Encoders.
+ */
+typedef struct encoder_s {
+   uint16_t cur_tick;
+   uint16_t last_tick;
+   uint8_t  pin_state;
+} encoder_t;
+static encoder_t encA, encB;
 
 
 /*
  * Prototypes.
  */
+/* I2C. */
 static uint8_t moski_read( uint8_t pos, uint8_t value );
 static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer );
+/* Scheduler. */
 static __inline void sched_init (void);
+static __inline void sched_run (void);
+/* Encoders. */
+static void encoder_init( encoder_t *enc, uint8_t pinstate );
+static __inline void encoders_init (void);
+
 
 
 static uint8_t read_buf[4]; /**< Small buf to help moski_read. */
@@ -62,7 +100,7 @@ static uint8_t moski_read( uint8_t pos, uint8_t value )
    if (i==3) {
       a = (read_buf[0]<<8) + read_buf[1];
       b = (read_buf[2]<<8) + read_buf[3];
-      motors_set( a, b );
+      /*motors_set( a, b );*/
    }
 
    return 0;
@@ -82,7 +120,7 @@ static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer )
    int16_t motor_a, motor_b;
 
    /* Get stuff. */
-   motors_get( &motor_a, &motor_b );
+   /*motors_get( &motor_a, &motor_b );*/
 
    /* Set up the data. */
    buffer[0] = motor_a>>8;
@@ -105,14 +143,74 @@ static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer )
 
 
 /**
+ * @brief Initializes a single encoder.
+ *
+ *    @param enc Encoder to initialize.
+ *    @param pinstate Current pinstate.
+ */
+static void encoder_init( encoder_t *enc, uint8_t pinstate )
+{
+   enc->cur_tick  = 0;
+   enc->last_tick = 0;
+   enc->pin_state = pinstate;
+}
+
+
+/**
+ * @brief Initializes the encoders.
+ */
+static __inline void encoders_init (void)
+{
+   /* Set pins as input. */
+   ENCODER_DDR &= ~(_BV(ENCODER_PORT_A) | _BV(ENCODER_PORT_B));
+   encoder_init( &encA, (ENCODER_PIN & _BV(ENCODER_PIN_A)) );
+   encoder_init( &encB, (ENCODER_PIN & _BV(ENCODER_PIN_B)) );
+
+   /* Set up interrupts. */
+   GIMSK       |= _BV(INT0) | _BV(ENCODER_INT); /* Globally enable pin change interrupts. */
+   ENCODER_MSK |= _BV(ENCODER_INT_A) | _BV(ENCODER_INT_B); /* Enabled encoder interrupts. */
+   MCUCR       |= /*_BV(ISC01) |*/ _BV(ISC00); /* Set on rise/falling edge. */
+
+}
+
+
+/**
  * @brief Scheduler interrupt on timer1 overflow.
+ *
+ * @note Running at 20 kHz.
  */
 ISR(SIG_OVERFLOW1)
 {
+   uint8_t inp;
+
+   /* Check to see if encoder A changed. */
+   if (encA.cur_tick < UINT16_MAX) /* Avoid overflow. */
+      encA.cur_tick++;
+   inp = ENCODER_PIN & _BV(ENCODER_PIN_A);
+   if (inp != encA.pin_state) { /* See if state changed. */
+      encA.pin_state = inp;
+      encA.last_tick = encA.cur_tick; /* Last tick is current tick. */
+      encA.cur_tick  = 0x00; /* Reset counter. */
+   }
+
+   /* Check to see if encoder B changed. */
+   if (encB.cur_tick < UINT16_MAX) /* Avoid overflow. */
+      encB.cur_tick++;
+   inp = ENCODER_PIN & _BV(ENCODER_PIN_B);
+   if (inp != encB.pin_state) { /* See if state changed. */
+      encB.pin_state = inp;
+      encB.last_tick = encB.cur_tick; /* Last tick is current tick. */
+      encB.cur_tick  = 0x00; /* Reset counter. */
+   }
+
    /* Do some scheduler stuff here. */
-   if (!(sched_counter % 25)) /* 40 Hz */
+   if (!(sched_counter % SCHED_MOTOR_DIVIDER))
+      sched_flags |= SCHED_MOTORS;
+#if MOSKI_USE_TEMP
+   if (!(sched_counter % SCHED_TEMP_DIVIDER))
       sched_flags |= SCHED_TEMP;
-   sched_counter = (sched_counter+1) % 100;
+#endif /* MOSKI_USE_TEMP */
+   sched_counter = (sched_counter+1) % SCHED_MAX_DIVIDER;
 
    /* Reset watchdog. */
    wdt_reset();
@@ -128,18 +226,56 @@ static __inline void sched_init (void)
     *
     * f_pwm = f_clk / (2 * N * TOP)
     *
-    * 1 kHz = 20 MHz / (2 * 8 * 1250)
+    *  1 kHz = 20 MHz / (2 * 8 * 1250)
+    * 20 kHz = 20 MHz / (2 * 1 * 500)
     */
    TCCR1A = _BV(WGM10) | /* Phase and freq correct mode with OCR1A. */
          0; /* No actual PWM output. */
    TCCR1B = _BV(WGM13) | /* Phase and freq correct mode with OCR1A. */
+         _BV(CS10); /* 1 prescaler. */
+#if 0
          _BV(CS11); /* 8 prescaler */
+         _BV(CS11) | _BV(CS10); /* 64 prescaler */
+         _BV(CS12); /* 256 prescaler */
+         _BV(CS12) | _BV(CS10); /* 1024 prescaler */
+#endif
    TIMSK1 = _BV(TOIE1); /* Enable Timer1 overflow. */
-   OCR1A  = 1250;
+   OCR1A  = 500;
 
    /* Initialize flags. */
    sched_flags = 0x00;
 }
+
+
+/**
+ * @brief Runs the scheduler.
+ */
+static __inline void sched_run (void)
+{  
+   uint8_t flags;
+   
+   /* Atomic store temporary flags and reset real flags in case we run a bit late. */
+   cli();
+   flags = sched_flags;
+   sched_flags = 0;
+   sei();
+   
+   /*
+    * Run tasks.
+    *
+    * Very important that the periodicity of the scheduler update task
+    *  allows this to finish or the loss of task execution may occur.
+    */
+   /* Motor task. */
+   /*if (flags & SCHED_MOTORS)
+      motors_control();*/
+#if MOSKI_USE_TEMP
+   /* Temp task. */
+   if (flags & SCHED_TEMP)
+      temp_start(); /* Start temperature conversion. */
+#endif /* MOSKI_USE_TEMP */
+}                                                                         
+        
 
 
 /**
@@ -168,7 +304,7 @@ int main (void)
 #endif /* MOSKI_USE_TEMP */
 
    /* Start the motor subsystem. */
-   motors_init();
+   /*motors_init();*/
 
    /* Initialize the scheduler. */
    sched_init();
