@@ -21,14 +21,14 @@
 /*
  * Scheduler divider.  Formula is:
  *
- *  f_task = f_sched * DIVIDER / DIVIDER_MAX
+ *  f_task = f_sched / DIVIDER
  *
  * Example
- *  100 Hz = 20 kHz * 5 / 1000
+ *  100 Hz = 20 kHz / 200
  */
-#define SCHED_MOTOR_DIVIDER   40
+#define SCHED_MOTOR_DIVIDER   200
 #define SCHED_TEMP_DIVIDER    1
-#define SCHED_MAX_DIVIDER     100
+#define SCHED_MAX_DIVIDER     200
 /* Scheduler state flags. */
 #define SCHED_MOTORS          (1<<0)
 #define SCHED_TEMP            (1<<1)
@@ -72,7 +72,11 @@ static void encoder_init( encoder_t *enc, uint8_t pinstate );
 static __inline void encoders_init (void);
 
 
-
+/*
+ *
+ *   I 2 C
+ *
+ */
 static uint8_t read_buf[4]; /**< Small buf to help moski_read. */
 /**
  * @brief Master read function for the Moski.
@@ -105,8 +109,6 @@ static uint8_t moski_read( uint8_t pos, uint8_t value )
 
    return 0;
 }
-
-
 /**
  * @brief Master write function for the Moski.
  *
@@ -138,6 +140,11 @@ static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer )
 }
 
 
+/*
+ *
+ *   E N C O D E R S
+ *
+ */
 /**
  * @brief Initializes a single encoder.
  *
@@ -150,8 +157,6 @@ static void encoder_init( encoder_t *enc, uint8_t pinstate )
    enc->last_tick = 0;
    enc->pin_state = pinstate;
 }
-
-
 /**
  * @brief Initializes the encoders.
  */
@@ -166,10 +171,14 @@ static __inline void encoders_init (void)
    GIMSK       |= _BV(INT0) | _BV(ENCODER_INT); /* Globally enable pin change interrupts. */
    ENCODER_MSK |= _BV(ENCODER_INT_A) | _BV(ENCODER_INT_B); /* Enabled encoder interrupts. */
    MCUCR       |= /*_BV(ISC01) |*/ _BV(ISC00); /* Set on rise/falling edge. */
-
 }
 
 
+/*
+ *
+ *   S C H E D U L E R
+ *
+ */
 /**
  * @brief Scheduler interrupt on timer1 overflow.
  *
@@ -211,8 +220,6 @@ ISR(SIG_OVERFLOW1)
    /* Reset watchdog. */
    wdt_reset();
 }
-
-
 /**
  * @brief Initializes the scheduler on Timer1.
  */
@@ -241,8 +248,6 @@ static __inline void sched_init (void)
    /* Initialize flags. */
    sched_flags = 0x00;
 }
-
-
 /**
  * @brief Runs the scheduler.
  */
