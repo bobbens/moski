@@ -43,8 +43,8 @@ uint8_t moski_mode = MOSKI_MODE_OPEN; /**< Current operating mode. */
 /*
  * Scheduler.
  */
-static uint16_t sched_counter = 0x00; /**< Scheduler counter. */
-static uint8_t  sched_flags   = 0x00; /**< Scheduler flags. */
+static uint16_t sched_counter = 0; /**< Scheduler counter. */
+static uint8_t  sched_flags   = 0; /**< Scheduler flags. */
 
 
 /*
@@ -195,21 +195,25 @@ ISR(SIG_OVERFLOW1)
    /* Check to see if encoder A changed. */
    if (encA.cur_tick < UINT16_MAX) /* Avoid overflow. */
       encA.cur_tick++;
+   else /* Overflow. */
+      encA.last_tick = encA.cur_tick;
    inp = ENCODER_PIN & _BV(ENCODER_PIN_A);
    if (inp != encA.pin_state) { /* See if state changed. */
       encA.pin_state = inp;
       encA.last_tick = encA.cur_tick; /* Last tick is current tick. */
-      encA.cur_tick  = 0x00; /* Reset counter. */
+      encA.cur_tick  = 0; /* Reset counter. */
    }
 
    /* Check to see if encoder B changed. */
    if (encB.cur_tick < UINT16_MAX) /* Avoid overflow. */
       encB.cur_tick++;
+   else /* Overflow. */
+      encB.last_tick = encB.cur_tick;
    inp = ENCODER_PIN & _BV(ENCODER_PIN_B);
    if (inp != encB.pin_state) { /* See if state changed. */
       encB.pin_state = inp;
       encB.last_tick = encB.cur_tick; /* Last tick is current tick. */
-      encB.cur_tick  = 0x00; /* Reset counter. */
+      encB.cur_tick  = 0; /* Reset counter. */
    }
 
    /* Do some scheduler stuff here. */
@@ -250,7 +254,7 @@ static __inline void sched_init (void)
    OCR1A  = 500;
 
    /* Initialize flags. */
-   sched_flags = 0x00;
+   sched_flags = 0;
 }
 /**
  * @brief Runs the scheduler.
@@ -268,13 +272,13 @@ static __inline void sched_run( uint8_t flags )
     */
    /* Motor task. */
    if (flags & SCHED_MOTORS) {
-      DDRA |= DDA2 | DDA7;
+      DDRA |= _BV(DDA2) | _BV(DDA7);
       if (t) {
-         PORTA |=  PORTA2;
-         PORTA &= ~PORTA7;
+         PORTA |=  _BV(PORTA2);
+         PORTA &= ~_BV(PORTA7);
       }
       else {
-         PORTA &= ~(PORTA2 | PORTA7);
+         PORTA &= ~(_BV(PORTA2) | _BV(PORTA7));
       }
       t = !t;
    }
@@ -331,7 +335,7 @@ int main (void)
    while (1) {
       /* Atomic test to see if has anything to do. */
       cli();
-      if (sched_flags != 0x00) {
+      if (sched_flags != 0) {
    
          /* Atomic store temporary flags and reset real flags in case we run a bit late. */
          flags = sched_flags;
