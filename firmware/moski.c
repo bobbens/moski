@@ -26,9 +26,9 @@
  * Example
  *  100 Hz = 20 kHz / 200
  */
-#define SCHED_MOTOR_DIVIDER   200 /**< What to divide main freq by for motor task. */
+#define SCHED_MOTOR_DIVIDER   60000 /**< What to divide main freq by for motor task. */
 #define SCHED_TEMP_DIVIDER    1 /**< What to divide main freq by for temp task. */
-#define SCHED_MAX_DIVIDER     200 /**< Overflow amount for scheduler divider. */
+#define SCHED_MAX_DIVIDER     60000 /**< Overflow amount for scheduler divider. */
 /* Scheduler state flags. */
 #define SCHED_MOTORS          (1<<0) /**< Run the motor task. */
 #define SCHED_TEMP            (1<<1) /**< Run the temperature task. */
@@ -257,6 +257,7 @@ static __inline void sched_init (void)
  *
  *    @param flags Current scheduler flags to use.
  */
+int t = 0;
 static __inline void sched_run( uint8_t flags )
 {  
    /*
@@ -266,9 +267,17 @@ static __inline void sched_run( uint8_t flags )
     *  allows this to finish or the loss of task execution may occur.
     */
    /* Motor task. */
-   (void) flags;
-   /*if (flags & SCHED_MOTORS)
-      motors_control();*/
+   if (flags & SCHED_MOTORS) {
+      DDRA |= DDA2 | DDA7;
+      if (t) {
+         PORTA |=  PORTA2;
+         PORTA &= ~PORTA7;
+      }
+      else {
+         PORTA &= ~(PORTA2 | PORTA7);
+      }
+      t = !t;
+   }
 #if MOSKI_USE_TEMP
    /* Temp task. */
    if (flags & SCHED_TEMP)
