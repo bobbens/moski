@@ -26,12 +26,12 @@
  * Example
  *  100 Hz = 20 kHz / 200
  */
-#define SCHED_MOTOR_DIVIDER   200
-#define SCHED_TEMP_DIVIDER    1
-#define SCHED_MAX_DIVIDER     200
+#define SCHED_MOTOR_DIVIDER   200 /**< What to divide main freq by for motor task. */
+#define SCHED_TEMP_DIVIDER    1 /**< What to divide main freq by for temp task. */
+#define SCHED_MAX_DIVIDER     200 /**< Overflow amount for scheduler divider. */
 /* Scheduler state flags. */
-#define SCHED_MOTORS          (1<<0)
-#define SCHED_TEMP            (1<<1)
+#define SCHED_MOTORS          (1<<0) /**< Run the motor task. */
+#define SCHED_TEMP            (1<<1) /**< Run the temperature task. */
 
 
 /**
@@ -50,12 +50,16 @@ static uint8_t  sched_flags   = 0x00; /**< Scheduler flags. */
 /*
  * Encoders.
  */
+/**
+ * @brief The encoder structure.
+ */
 typedef struct encoder_s {
-   uint16_t cur_tick;
-   uint16_t last_tick;
-   uint8_t  pin_state;
+   uint16_t cur_tick; /**< Current tick (counts up with overflow). */
+   uint16_t last_tick; /**< Last tick to register a state change. */
+   uint8_t  pin_state; /**< Current pin state. */
 } encoder_t;
-static encoder_t encA, encB;
+static encoder_t encA; /**< Encoder on motor A. */
+static encoder_t encB; /**< Encoder on motor B. */
 
 
 /*
@@ -250,6 +254,8 @@ static __inline void sched_init (void)
 }
 /**
  * @brief Runs the scheduler.
+ *
+ *    @param flags Current scheduler flags to use.
  */
 static __inline void sched_run( uint8_t flags )
 {  
