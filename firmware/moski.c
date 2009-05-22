@@ -11,29 +11,76 @@
 
 #include <stdint.h>
 
-#include "sched.h"
+#include "moski_conf.h"
 #include "i2cs.h"
-#include "temp.h"
-#include "motors.h"
 
 
+/*
+ * Scheduler defines.
+ */
+/*
+ * Scheduler divider.  Formula is:
+ *
+ *  f_task = f_sched / DIVIDER
+ *
+ * Example
+ *  100 Hz = 20 kHz / 200
+ */
+#define SCHED_MOTOR_DIVIDER   60000 /**< What to divide main freq by for motor task. */
+#define SCHED_TEMP_DIVIDER    1 /**< What to divide main freq by for temp task. */
+#define SCHED_MAX_DIVIDER     60000 /**< Overflow amount for scheduler divider. */
+/* Scheduler state flags. */
+#define SCHED_MOTORS          (1<<0) /**< Run the motor task. */
+#define SCHED_TEMP            (1<<1) /**< Run the temperature task. */
+
+
+/**
+ * Operating mode.
+ */
 uint8_t moski_mode = MOSKI_MODE_OPEN; /**< Current operating mode. */
 
 
 /*
  * Scheduler.
  */
-static uint8_t sched_counter = 0x00; /**< Scheduler counter. */
+static uint16_t sched_counter = 0; /**< Scheduler counter. */
+static uint8_t  sched_flags   = 0; /**< Scheduler flags. */
+
+
+/*
+ * Encoders.
+ */
+/**
+ * @brief The encoder structure.
+ */
+typedef struct encoder_s {
+   uint16_t cur_tick; /**< Current tick (counts up with overflow). */
+   uint16_t last_tick; /**< Last tick to register a state change. */
+   uint8_t  pin_state; /**< Current pin state. */
+} encoder_t;
+static encoder_t encA; /**< Encoder on motor A. */
+static encoder_t encB; /**< Encoder on motor B. */
 
 
 /*
  * Prototypes.
  */
+/* I2C. */
 static uint8_t moski_read( uint8_t pos, uint8_t value );
 static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer );
+/* Scheduler. */
 static __inline void sched_init (void);
+static __inline void sched_run( uint8_t flags );
+/* Encoders. */
+static void encoder_init( encoder_t *enc, uint8_t pinstate );
+static __inline void encoders_init (void);
 
 
+/*
+ *
+ *   I 2 C
+ *
+ */
 static uint8_t read_buf[4]; /**< Small buf to help moski_read. */
 /**
  * @brief Master read function for the Moski.
@@ -61,13 +108,11 @@ static uint8_t moski_read( uint8_t pos, uint8_t value )
    if (i==3) {
       a = (read_buf[0]<<8) + read_buf[1];
       b = (read_buf[2]<<8) + read_buf[3];
-      motors_set( a, b );
+      /*motors_set( a, b );*/
    }
 
    return 0;
 }
-
-
 /**
  * @brief Master write function for the Moski.
  *
@@ -78,40 +123,111 @@ static uint8_t moski_read( uint8_t pos, uint8_t value )
 static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer )
 {
    (void) buf_len;
-   uint16_t temp;
-   int16_t motor_a, motor_b;
-
-   /* Get stuff. */
-   motors_get( &motor_a, &motor_b );
-   temp = temp_get();
 
    /* Set up the data. */
-   buffer[0] = motor_a>>8;
-   buffer[1] = motor_a & 0xFF;
-   buffer[2] = motor_b>>8;
-   buffer[3] = motor_b & 0xFF;
+   buffer[0] = encA.last_tick >> 8;
+   buffer[1] = encA.last_tick;
+   buffer[2] = encB.last_tick >> 8;
+   buffer[3] = encB.last_tick;
+
+#if MOSKI_USE_TEMP
+   uint16_t temp;
+   temp = temp_get();
    buffer[4] = temp>>8;
    buffer[5] = temp & 0xFF;
+#else /* MOSKI_USE_TEMP */
+   buffer[4] = 0;
+   buffer[5] = 0;
+#endif /* MOSKI_USE_TEMP */
 
    return 6;
 }
 
 
+/*
+ *
+ *   E N C O D E R S
+ *
+ */
+/**
+ * @brief Initializes a single encoder.
+ *
+ *    @param enc Encoder to initialize.
+ *    @param pinstate Current pinstate.
+ */
+static void encoder_init( encoder_t *enc, uint8_t pinstate )
+{
+   enc->cur_tick  = 0;
+   enc->last_tick = UINT16_MAX; /* Consider stopped. */
+   enc->pin_state = pinstate;
+}
+/**
+ * @brief Initializes the encoders.
+ */
+static __inline void encoders_init (void)
+{
+   /* Set pins as input. */
+   ENCODER_DDR &= ~(_BV(ENCODER_PORT_A) | _BV(ENCODER_PORT_B));
+   encoder_init( &encA, (ENCODER_PIN & _BV(ENCODER_PIN_A)) );
+   encoder_init( &encB, (ENCODER_PIN & _BV(ENCODER_PIN_B)) );
+
+   /* Set up interrupts. */
+   GIMSK       |= _BV(INT0) | _BV(ENCODER_INT); /* Globally enable pin change interrupts. */
+   ENCODER_MSK |= _BV(ENCODER_INT_A) | _BV(ENCODER_INT_B); /* Enabled encoder interrupts. */
+   MCUCR       |= /*_BV(ISC01) |*/ _BV(ISC00); /* Set on rise/falling edge. */
+}
+
+
+/*
+ *
+ *   S C H E D U L E R
+ *
+ */
 /**
  * @brief Scheduler interrupt on timer1 overflow.
+ *
+ * @note Running at 20 kHz.
  */
 ISR(SIG_OVERFLOW1)
 {
+   uint8_t inp;
+
+   /* Check to see if encoder A changed. */
+   if (encA.cur_tick < UINT16_MAX) /* Avoid overflow. */
+      encA.cur_tick++;
+   else /* Overflow. */
+      encA.last_tick = encA.cur_tick;
+   inp = ENCODER_PIN & _BV(ENCODER_PIN_A);
+   if (inp != encA.pin_state) { /* See if state changed. */
+      encA.pin_state = inp;
+      encA.last_tick = encA.cur_tick; /* Last tick is current tick. */
+      encA.cur_tick  = 0; /* Reset counter. */
+   }
+
+   /* Check to see if encoder B changed. */
+   if (encB.cur_tick < UINT16_MAX) /* Avoid overflow. */
+      encB.cur_tick++;
+   else /* Overflow. */
+      encB.last_tick = encB.cur_tick;
+   inp = ENCODER_PIN & _BV(ENCODER_PIN_B);
+   if (inp != encB.pin_state) { /* See if state changed. */
+      encB.pin_state = inp;
+      encB.last_tick = encB.cur_tick; /* Last tick is current tick. */
+      encB.cur_tick  = 0; /* Reset counter. */
+   }
+
    /* Do some scheduler stuff here. */
-   if (!(sched_counter % 25)) /* 40 Hz */
+   if (!(sched_counter % SCHED_MOTOR_DIVIDER))
+      sched_flags |= SCHED_MOTORS;
+#if MOSKI_USE_TEMP
+   if (!(sched_counter % SCHED_TEMP_DIVIDER))
       sched_flags |= SCHED_TEMP;
-   sched_counter = (sched_counter+1) % 100;
+#endif /* MOSKI_USE_TEMP */
+   sched_counter = (sched_counter+1) % SCHED_MAX_DIVIDER;
 
    /* Reset watchdog. */
    wdt_reset();
 }
-
-
 /**
  * @brief Initializes the scheduler on Timer1.
  */
@@ -121,15 +237,58 @@ static __inline void sched_init (void)
     *
     * f_pwm = f_clk / (2 * N * TOP)
     *
-    * 1 kHz = 20 MHz / (2 * 8 * 1250)
+    *  1 kHz = 20 MHz / (2 * 8 * 1250)
+    * 20 kHz = 20 MHz / (2 * 1 * 500)
     */
    TCCR1A = _BV(WGM10) | /* Phase and freq correct mode with OCR1A. */
          0; /* No actual PWM output. */
    TCCR1B = _BV(WGM13) | /* Phase and freq correct mode with OCR1A. */
+         _BV(CS10); /* 1 prescaler. */
+#if 0
          _BV(CS11); /* 8 prescaler */
+         _BV(CS11) | _BV(CS10); /* 64 prescaler */
+         _BV(CS12); /* 256 prescaler */
+         _BV(CS12) | _BV(CS10); /* 1024 prescaler */
+#endif
    TIMSK1 = _BV(TOIE1); /* Enable Timer1 overflow. */
-   OCR1A  = 1250;
+   OCR1A  = 500;
+
+   /* Initialize flags. */
+   sched_flags = 0;
 }
+/**
+ * @brief Runs the scheduler.
+ *
+ *    @param flags Current scheduler flags to use.
+ */
+int t = 0;
+static __inline void sched_run( uint8_t flags )
+{  
+   /*
+    * Run tasks.
+    *
+    * Very important that the periodicity of the scheduler update task
+    *  allows this to finish or the loss of task execution may occur.
+    */
+   /* Motor task. */
+   if (flags & SCHED_MOTORS) {
+      DDRA |= _BV(DDA2) | _BV(DDA7);
+      if (t) {
+         PORTA |=  _BV(PORTA2);
+         PORTA &= ~_BV(PORTA7);
+      }
+      else {
+         PORTA &= ~(_BV(PORTA2) | _BV(PORTA7));
+      }
+      t = !t;
+   }
+#if MOSKI_USE_TEMP
+   /* Temp task. */
+   if (flags & SCHED_TEMP)
+      temp_start(); /* Start temperature conversion. */
+#endif /* MOSKI_USE_TEMP */
+}                                                                         
+        
 
 
 /**
@@ -137,6 +296,8 @@ static __inline void sched_init (void)
  */
 int main (void)
 {
+   uint8_t flags;
+
    /* Disable watchdog timer since it doesn't always get reset on restart. */
    wdt_disable();
 
@@ -153,10 +314,15 @@ int main (void)
    set_sleep_mode( SLEEP_MODE_IDLE );
 
    /* Start the temperature subsystem. */
+#if MOSKI_USE_TEMP
    temp_init();
+#endif /* MOSKI_USE_TEMP */
 
    /* Start the motor subsystem. */
-   motors_init();
+   /*motors_init();*/
+
+   /* Initialize the encoders. */
+   encoders_init();
 
    /* Initialize the scheduler. */
    sched_init();
@@ -165,20 +331,19 @@ int main (void)
    wdt_reset(); /* Just in case. */
    wdt_enable(WDTO_250MS);
 
-   /* Set interrupts. */
-   sei();
-
    /* Main loop. */
    while (1) {
-
       /* Atomic test to see if has anything to do. */
       cli();
-      if (sched_flags != 0x00) {
-         /* Activate interrupts again. */
-         sei();
+      if (sched_flags != 0) {
+   
+         /* Atomic store temporary flags and reset real flags in case we run a bit late. */
+         flags = sched_flags;
+         sched_flags = 0;
+         sei(); /* Restart interrupts. */
 
          /* Run scheduler. */
-         sched_run();
+         sched_run( flags );
       }
       /* Reactivate interrupts and do nothing. */
       else

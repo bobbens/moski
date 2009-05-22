@@ -47,7 +47,7 @@ void encoders_init (void)
    encoder_pin_b = (ENCODER_PIN & _BV(ENCODER_PIN_B));
 
    /* Set up interrupts. */
-   GIMSK       |= ENCODER_INT; /* Globally enable pin change interrupts. */
+   GIMSK       |= _BV(INT0) | _BV(ENCODER_INT); /* Globally enable pin change interrupts. */
    ENCODER_MSK |= _BV(ENCODER_INT_A) | _BV(ENCODER_INT_B); /* Enabled encoder interrupts. */
    MCUCR       |= /*_BV(ISC01) |*/ _BV(ISC00); /* Set on rise/falling edge. */
 }

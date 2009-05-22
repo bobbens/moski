@@ -57,7 +57,7 @@ PROJECT  := moski
 
 PRG      := $(PROJECT)
 
-SRC      := moski.c i2cs.c temp.c motors.c encoders.c sched.c
+SRC      := moski.c i2cs.c
 ASRC     := 
 GCCLIB   :=
 

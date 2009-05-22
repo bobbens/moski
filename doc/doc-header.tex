@@ -1,0 +1,49 @@
+\documentclass[a4paper]{book}
+%\nonstopmode
+\usepackage{a4wide}
+\usepackage{makeidx}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{alltt}
+\usepackage{doxygen}
+\usepackage{palatino}
+\ifx\pdfoutput\undefined
+\usepackage[ps2pdf,
+            pagebackref=true,
+            colorlinks=true,
+            linkcolor=blue
+           ]{hyperref}
+\else
+\usepackage[pdftex,
+            pagebackref=true,
+            colorlinks=true,
+            linkcolor=blue
+           ]{hyperref}
+\fi
+\makeindex
+\setcounter{tocdepth}{1}
+%\setlength{\footrulewidth}{0.4pt}
+\setlength{\leftmargin}{5cm}
+\newcommand{\widewidth}[0]{1.15\textwidth}
+
+\rfoot[\fancyplain{}{\scriptsize $projectname V$projectnumber}]{}
+\lfoot[]{\fancyplain{}{\scriptsize $projectname V$projectnumber}}
+
+\begin{document}
+% simple title
+\title{ 
+\vspace{6cm}
+$projectname \\ Version $projectnumber }
+\author{Jordi Pegueroles \\ Edgar Simo}
+\maketitle
+
+\vspace{4cm}
+
+%\newpage
+%Copyright \copyright\ 2008 
+
+\newpage
+
+\pagenumbering{arabic}
+

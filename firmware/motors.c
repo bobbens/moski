@@ -120,10 +120,10 @@ __inline void motors_control (void)
       mota.cmd = motor_control( &mota, enca );
       motb.cmd = motor_control( &motb, encb );
    }
-   /* Open loop. */
+   /* Open loop just sets velocity. */
    else if (moski_mode == MOSKI_MODE_OPEN) {
-      mota.cmd = mota.target>>8;
-      motb.cmd = motb.target>>8;
+      mota.vel = enca;
+      motb.vel = encb;
    }
 }
 
@@ -174,8 +174,14 @@ static void motor_set( motor_t *mot, int16_t target )
  */
 void motors_set( int16_t motor_a, int16_t motor_b )
 {
-   motor_set( &mota, motor_a );
-   motor_set( &motb, motor_b );
+   if (moski_mode == MOSKI_MODE_CONTROL) {
+      motor_set( &mota, motor_a );
+      motor_set( &motb, motor_b );
+   }
+   else if (moski_mode == MOSKI_MODE_OPEN) {
+      mota.cmd = motor_a & 0xFF;
+      motb.cmd = motor_b & 0xFF;
+   }
 }
 
 
@@ -200,6 +206,8 @@ void motors_get( int16_t *motor_a, int16_t *motor_b )
 
 /**
  * @brief Clears a motor.
+ *
+ *    @param mot Motor to clear.
  */
 static void motor_init( motor_t *mot )
 {

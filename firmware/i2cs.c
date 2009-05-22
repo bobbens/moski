@@ -222,10 +222,8 @@ ISR(SIG_USI_OVERFLOW)
             SET_USI_TO_I2C_START_CONDITION_MODE();
             return;
          }
-         else { /* Has more data. */
-            USIDR = i2cs_tx_buf[ i2cs_tx_pos ];
-            i2cs_tx_pos++;
-         }                                                                   
+         else /* Has more data. */
+            USIDR = i2cs_tx_buf[ i2cs_tx_pos++ ];
          i2cs_overflow_state = I2CS_STATE_REQUEST_REPLY_FROM_SEND_DATA;
          SET_USI_TO_SEND_DATA();
          break;

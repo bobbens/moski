@@ -1,12 +1,18 @@
 
 
-#ifndef ENCODERS_H
-#  define ENCODERS_H
+#ifndef MOSKI_CONF_H
+#  define MOSKI_CONF_H
 
 
-#include <stdint.h>
+/*
+ * Enabled subsystems.
+ */
+#define MOSKI_USE_TEMP     0
 
 
+/*
+ * Encoder details.
+ */
 #define ENCODER_INT        PCIE0    /**< Global interrupt mask for encoders. */
 #define ENCODER_MSK        PCMSK0   /**< Interrupt mask register for encoders. */
 #define ENCODER_INT_A      PCINT0   /**< Interrupt pin encoder A is on. */
@@ -23,21 +29,5 @@
 #define ENCODER_NUM        2 /**< Number of areas on the encodor. */
 
 
-/*
- * Initialization.
- */
-void encoders_init (void);
-
-
-/*
- * Current encoder values.
- *
- * We assume that we're going fast enough to not overflow 8 bits.
- */
-extern volatile uint8_t encoder_a; /**< Encoder A counter. */
-extern volatile uint8_t encoder_b; /**< Encoder B counter. */
-
-
-#endif /* ENCODERS_H */
-
+#endif /* MOSKI_CONF_H */
 
