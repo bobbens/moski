@@ -367,7 +367,7 @@ int main (void)
 #endif /* MOSKI_USE_TEMP */
 
    /* Start the motor subsystem. */
-   /*motors_init();*/
+   motors_init();
 
    /* Initialize the encoders. */
    encoders_init();
