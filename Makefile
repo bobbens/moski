@@ -23,7 +23,9 @@ all: dox
 clean:
 	$(REMOVE) $(OBJS) $(PRG).elf $(PRG).hex
 
-dox:
+dox: doc/moski.pdf
+
+doc/moski.pdf:
 	@doxygen
 	@make -C latex refman.pdf
 	@mv latex/refman.pdf doc/moski.pdf
