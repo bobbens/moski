@@ -26,9 +26,9 @@
  * Example
  *  100 Hz = 20 kHz / 200
  */
-#define SCHED_MOTOR_DIVIDER   60000 /**< What to divide main freq by for motor task. */
+#define SCHED_MOTOR_DIVIDER   6 /**< What to divide main freq by for motor task. */
 #define SCHED_TEMP_DIVIDER    1 /**< What to divide main freq by for temp task. */
-#define SCHED_MAX_DIVIDER     60000 /**< Overflow amount for scheduler divider. */
+#define SCHED_MAX_DIVIDER     6 /**< Overflow amount for scheduler divider. */
 /* Scheduler state flags. */
 #define SCHED_MOTORS          (1<<0) /**< Run the motor task. */
 #define SCHED_TEMP            (1<<1) /**< Run the temperature task. */
@@ -43,8 +43,8 @@ uint8_t moski_mode = MOSKI_MODE_OPEN; /**< Current operating mode. */
 /*
  * Scheduler.
  */
-static uint16_t sched_counter = 0; /**< Scheduler counter. */
-static uint8_t  sched_flags   = 0; /**< Scheduler flags. */
+static volatile uint8_t sched_counter = 0; /**< Scheduler counter. */
+static volatile uint8_t sched_flags   = 0; /**< Scheduler flags. */
 
 
 /*
@@ -74,7 +74,8 @@ static __inline void sched_run( uint8_t flags );
 /* Encoders. */
 static void encoder_init( encoder_t *enc, uint8_t pinstate );
 static __inline void encoders_init (void);
-
+/* Motors. */
+static __inline void motors_init (void);
 
 /*
  *
@@ -182,6 +183,44 @@ static __inline void encoders_init (void)
 
 /*
  *
+ *   M O T O R S
+ *
+ */
+/**
+ * @brief Initializes the motors.
+ */
+static __inline void motors_init (void)
+{
+   /* Initialize reverse pins. */
+   PORTA |= _BV(PINA3) |
+            _BV(PINA2);
+   DDRA  |= _BV(PINA3) |
+            _BV(PINA2);
+
+   /* Initialize PWM pins. */
+   DDRA  |= _BV(DDA7);
+   DDRB  |= _BV(DDB2);
+   
+   /* Initialize pwm.
+    *
+    * We'll want the fast PWM mode wih the 64 prescaler.
+    *
+    *    f_pwm = f_clk / (256 * N)
+    *    f_pwm = 20 MHz / (256 * 64) = 1.22 kHz
+    */
+   TCCR0A = _BV(WGM00) | _BV(WGM01) | /* Fast PWM mode. */
+            _BV(COM0A1) | _BV(COM0B1); /* Non-inverting mode. */
+   TCCR0B = _BV(CS01)  | _BV(CS00); /* 64 prescaler */
+   /*TIMSK0 = _BV(TOIE0); *//* Enable overflow interrupt on timer 0. */
+
+   /* Start both motors stopped. */
+   OCR0A  = 0;
+   OCR0B  = 0;
+}
+
+
+/*
+ *
  *   S C H E D U L E R
  *
  */
@@ -263,7 +302,8 @@ static __inline void sched_init (void)
  *
  *    @param flags Current scheduler flags to use.
  */
-int t = 0;
+static uint8_t motor_dir   = 0;
+static uint8_t motor_delay = 0;
 static __inline void sched_run( uint8_t flags )
 {  
    /*
@@ -274,15 +314,21 @@ static __inline void sched_run( uint8_t flags )
     */
    /* Motor task. */
    if (flags & SCHED_MOTORS) {
-      DDRA |= _BV(DDA2) | _BV(DDA7);
-      if (t) {
-         PORTA |=  _BV(PORTA2);
-         PORTA &= ~_BV(PORTA7);
+      motor_delay++;
+      if (motor_delay==0) {
+         if (!motor_dir) {
+            if (OCR0A > 128)
+               motor_dir = !motor_dir;
+            OCR0A = OCR0A+1;
+            OCR0B = OCR0B+1;
+         }
+         else {
+            if (OCR0A < 10)
+               motor_dir = !motor_dir;
+            OCR0A = OCR0A-1;
+            OCR0B = OCR0B-1;
+         }
       }
-      else {
-         PORTA &= ~(_BV(PORTA2) | _BV(PORTA7));
-      }
-      t = !t;
    }
 #if MOSKI_USE_TEMP
    /* Temp task. */
