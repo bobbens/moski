@@ -172,10 +172,13 @@ static void encoders_init (void)
    encoder_init( &encA, (ENCODER_PIN & _BV(ENCODER_PIN_A)) );
    encoder_init( &encB, (ENCODER_PIN & _BV(ENCODER_PIN_B)) );
 
+#if 0
    /* Set up interrupts. */
    GIMSK       |= _BV(INT0) | _BV(ENCODER_INT); /* Globally enable pin change interrupts. */
    ENCODER_MSK |= _BV(ENCODER_INT_A) | _BV(ENCODER_INT_B); /* Enabled encoder interrupts. */
    MCUCR       |= /*_BV(ISC01) |*/ _BV(ISC00); /* Set on rise/falling edge. */
+#endif
+
 }
 /**
  * @brief Encoder signal handler.
@@ -236,8 +239,8 @@ static void motors_init (void)
    /*TIMSK0 = _BV(TOIE0); *//* Enable overflow interrupt on timer 0. */
 
    /* Start both motors stopped. */
-   OCR0A  = 0;
-   OCR0B  = 0;
+   OCR0A  = 128;
+   OCR0B  = 128;
 }
 
 
@@ -325,13 +328,13 @@ static void sched_run( uint8_t flags )
       motor_delay++;
       if (motor_delay==0) {
          if (!motor_dir) {
-            if (OCR0A > 128)
+            if (OCR0A > 240)
                motor_dir = !motor_dir;
             OCR0A = OCR0A+1;
             OCR0B = OCR0B+1;
          }
          else {
-            if (OCR0A < 10)
+            if (OCR0A < 80)
                motor_dir = !motor_dir;
             OCR0A = OCR0A-1;
             OCR0B = OCR0B-1;
