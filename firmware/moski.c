@@ -69,13 +69,13 @@ static encoder_t encB; /**< Encoder on motor B. */
 static uint8_t moski_read( uint8_t pos, uint8_t value );
 static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer );
 /* Scheduler. */
-static __inline void sched_init (void);
-static __inline void sched_run( uint8_t flags );
+static void sched_init (void);
+static void sched_run( uint8_t flags );
 /* Encoders. */
 static void encoder_init( encoder_t *enc, uint8_t pinstate );
-static __inline void encoders_init (void);
+static void encoders_init (void);
 /* Motors. */
-static __inline void motors_init (void);
+static void motors_init (void);
 
 /*
  *
@@ -165,7 +165,7 @@ static void encoder_init( encoder_t *enc, uint8_t pinstate )
 /**
  * @brief Initializes the encoders.
  */
-static __inline void encoders_init (void)
+static void encoders_init (void)
 {
    /* Set pins as input. */
    ENCODER_DDR &= ~(_BV(ENCODER_PORT_A) | _BV(ENCODER_PORT_B));
@@ -211,7 +211,7 @@ ISR(ENCODER_SIG)
 /**
  * @brief Initializes the motors.
  */
-static __inline void motors_init (void)
+static void motors_init (void)
 {
    /* Initialize reverse pins. */
    PORTA |= _BV(PINA3) |
@@ -280,7 +280,7 @@ ISR(SIG_OVERFLOW1)
 /**
  * @brief Initializes the scheduler on Timer1.
  */
-static __inline void sched_init (void)
+static void sched_init (void)
 {
    /* Phase and freq correct mode.
     *
@@ -312,7 +312,7 @@ static __inline void sched_init (void)
  */
 static uint8_t motor_dir   = 0;
 static uint8_t motor_delay = 0;
-static __inline void sched_run( uint8_t flags )
+static void sched_run( uint8_t flags )
 {  
    /*
     * Run tasks.
@@ -385,7 +385,7 @@ int main (void)
 
    /* Set up watchdog timer. */
    wdt_reset(); /* Just in case. */
-   wdt_enable(WDTO_250MS);
+   wdt_enable(WDTO_15MS);
 
    /* Main loop. */
    while (1) {
