@@ -401,12 +401,13 @@ int main (void)
          /* Run scheduler. */
          sched_run( flags );
       }
-      /* Reactivate interrupts and do nothing. */
-      else
+      /* Sleep. */
+      else {
+         sleep_enable();
          sei();
-
-      /* Sleep until next interrupt. */
-      sleep_mode();
+         sleep_cpu();
+         sleep_disable();
+      }
    }
 }
 
