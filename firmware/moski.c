@@ -63,6 +63,19 @@ static encoder_t encB; /**< Encoder on motor B. */
 
 
 /*
+ * Motors.
+ */
+/**
+ * @brief The motor structure.
+ */
+typedef struct motor_s {
+   uint16_t target; /**< Target velocity. */
+} motor_t;
+static motor_t motA; /**< Motor A. */
+static motor_t motB; /**< Motor B. */
+
+
+/*
  * Prototypes.
  */
 /* I2C. */
@@ -72,10 +85,12 @@ static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer );
 static void sched_init (void);
 static void sched_run( uint8_t flags );
 /* Encoders. */
-static void encoder_init( encoder_t *enc, uint8_t pinstate );
+static void encoder_initStruct( encoder_t *enc, uint8_t pinstate );
 static void encoders_init (void);
 /* Motors. */
+static void motor_initStruct( motor_t *mot );
 static void motors_init (void);
+static uint8_t motor_control( motor_t *mot, encoder_t *enc );
 
 /*
  *
@@ -93,7 +108,6 @@ static uint8_t read_buf[4]; /**< Small buf to help moski_read. */
 static uint8_t moski_read( uint8_t pos, uint8_t value )
 {
    int i;
-   int16_t a,b;
 
    /* First byte is always position. */
    if (pos == 0) {
@@ -105,11 +119,10 @@ static uint8_t moski_read( uint8_t pos, uint8_t value )
    i = (pos-1) % 4;
    read_buf[i] = value;
 
-   /* Send to motors. */
+   /* We convert from rpm to rps and set as motor targets. */
    if (i==3) {
-      a = (read_buf[0]<<8) + read_buf[1];
-      b = (read_buf[2]<<8) + read_buf[3];
-      /*motors_set( a, b );*/
+      motA.target = ((read_buf[0]<<8) + read_buf[1])/60;
+      motB.target = ((read_buf[2]<<8) + read_buf[3])/60;
    }
 
    return 0;
@@ -156,7 +169,7 @@ static uint8_t moski_write( uint8_t buf_len, uint8_t *buffer )
  *    @param enc Encoder to initialize.
  *    @param pinstate Current pinstate.
  */
-static void encoder_init( encoder_t *enc, uint8_t pinstate )
+static void encoder_initStruct( encoder_t *enc, uint8_t pinstate )
 {
    enc->cur_tick  = 0;
    enc->last_tick = UINT16_MAX; /* Consider stopped. */
@@ -169,8 +182,8 @@ static void encoders_init (void)
 {
    /* Set pins as input. */
    ENCODER_DDR  &= ~(_BV(ENCODER_DD_A) | _BV(ENCODER_DD_B));
-   encoder_init( &encA, (ENCODER_PIN & _BV(ENCODER_PIN_A)) );
-   encoder_init( &encB, (ENCODER_PIN & _BV(ENCODER_PIN_B)) );
+   encoder_initStruct( &encA, (ENCODER_PIN & _BV(ENCODER_PIN_A)) );
+   encoder_initStruct( &encB, (ENCODER_PIN & _BV(ENCODER_PIN_B)) );
 
    /* Set up interrupts.
     *
@@ -213,6 +226,13 @@ ISR(ENCODER_SIG)
  *
  */
 /**
+ * @brief Initializes a motor structure.
+ */
+static void motor_initStruct( motor_t *mot )
+{
+   mot->target = 0;
+}
+/**
  * @brief Initializes the motors.
  */
 static void motors_init (void)
@@ -242,6 +262,42 @@ static void motors_init (void)
    /* Start both motors stopped. */
    OCR0A  = 0xFF;
    OCR0B  = 0xFF;
+
+   /* Initialize motor structures. */
+   motor_initStruct( &motA );
+   motor_initStruct( &motB );
+}
+/**
+ * @brief Does the motor control.
+ *
+ *    @param mot Motor to control.
+ *    @param enc Encoder feedback for motor to control.
+ */
+static uint8_t motor_control( motor_t *mot, encoder_t *enc )
+{
+   int16_t feedback, error, output;
+
+   /* Process the feedback.
+    *
+    *    ticks[50kHz]   N encoder turn        1 second
+    * X  ------------ * -------------- * -------------------   ===>
+    *    encoder turn    1 revolution     50000 ticks[50kHz]
+    *
+    *
+    *  N / 50000
+    *  ---------  = revolutions per second
+    *      X
+    */
+   feedback = 12500 / enc->last_tick;
+
+   /* Calculate the error. */
+   error    = mot->target - feedback;
+
+   /* Run control. */
+   output   = error * 10;
+
+   /* It's inverted. */
+   return 0xFF - (output>>8);
 }
 
 
@@ -325,6 +381,8 @@ static void sched_run( uint8_t flags )
     */
    /* Motor task. */
    if (flags & SCHED_MOTORS) {
+      OCR0A = motor_control( &motA, &encA );
+      OCR0B = motor_control( &motB, &encB );
    }
 #if MOSKI_USE_TEMP
    /* Temp task. */
