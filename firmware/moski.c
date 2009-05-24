@@ -169,11 +169,14 @@ static void encoders_init (void)
 {
    /* Set pins as input. */
    ENCODER_DDR  &= ~(_BV(ENCODER_DD_A) | _BV(ENCODER_DD_B));
-   ENCODER_PORT &= ~(_BV(ENCODER_PORT_A) | _BV(ENCODER_PORT_B));
    encoder_init( &encA, (ENCODER_PIN & _BV(ENCODER_PIN_A)) );
    encoder_init( &encB, (ENCODER_PIN & _BV(ENCODER_PIN_B)) );
 
-   /* Set up interrupts. */
+   /* Set up interrupts.
+    *
+    * PCINT automatically generates interrupt on toggle of the PCINT pins
+    *  involved.  In this case the ENCODER_INT_A and ENCODER_INT_B.
+    */
    GIMSK       |= _BV(ENCODER_INT); /* Globally enable pin change interrupts. */
    ENCODER_MSK |= _BV(ENCODER_INT_A) | _BV(ENCODER_INT_B); /* Enabled encoder interrupts. */
 
