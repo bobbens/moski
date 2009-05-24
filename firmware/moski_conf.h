@@ -4,6 +4,9 @@
 #  define MOSKI_CONF_H
 
 
+#include <avr/io.h>
+
+
 /*
  * Enabled subsystems.
  */
@@ -20,9 +23,12 @@
 #define ENCODER_SIG        SIG_PIN_CHANGE0 /**< Interrupt vector for encoders. */
 
 #define ENCODER_DDR        DDRA     /**< DDR register for encoders. */
-#define ENCODER_PIN        PINA     /**< Pin encoders are on. */
+#define ENCODER_DD_A       DA0      /**< Encoder A dd pin. */
+#define ENCODER_DD_B       DA1      /**< Encoder A dd pin. */
+#define ENCODER_PORT       PORTA    /**< PORT register for encoders. */
 #define ENCODER_PORT_A     PA0      /**< Encoder A port. */
 #define ENCODER_PORT_B     PA1      /**< Encoder B port. */
+#define ENCODER_PIN        PINA     /**< Pin encoders are on. */
 #define ENCODER_PIN_A      PINA0 /**< Encoder A pin. */
 #define ENCODER_PIN_B      PINA1 /**< Encoder B pin. */
 

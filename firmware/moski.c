@@ -168,7 +168,8 @@ static void encoder_init( encoder_t *enc, uint8_t pinstate )
 static void encoders_init (void)
 {
    /* Set pins as input. */
-   ENCODER_DDR &= ~(_BV(ENCODER_PORT_A) | _BV(ENCODER_PORT_B));
+   ENCODER_DDR  &= ~(_BV(ENCODER_DD_A) | _BV(ENCODER_DD_B));
+   ENCODER_PORT &= ~(_BV(ENCODER_PORT_A) | _BV(ENCODER_PORT_B));
    encoder_init( &encA, (ENCODER_PIN & _BV(ENCODER_PIN_A)) );
    encoder_init( &encB, (ENCODER_PIN & _BV(ENCODER_PIN_B)) );
 
