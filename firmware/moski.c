@@ -104,7 +104,7 @@ static uint8_t moski_read( uint8_t pos, uint8_t value )
    /* Fill buffer. */
    i = (pos-1) % 4;
    read_buf[i] = value;
-   
+
    /* Send to motors. */
    if (i==3) {
       a = (read_buf[0]<<8) + read_buf[1];
@@ -181,7 +181,7 @@ static void encoders_init (void)
  * @brief Encoder signal handler.
  */
 ISR(ENCODER_SIG)
-{  
+{
    uint8_t inp;
 
    /* Check to see if encoder A changed. */
@@ -214,15 +214,15 @@ ISR(ENCODER_SIG)
 static void motors_init (void)
 {
    /* Initialize reverse pins. */
-   PORTA |= _BV(PINA3) |
-            _BV(PINA2);
+   PORTA |= _BV(PA3) |
+            _BV(PA2);
    DDRA  |= _BV(PINA3) |
             _BV(PINA2);
 
    /* Initialize PWM pins. */
    DDRA  |= _BV(DDA7);
    DDRB  |= _BV(DDB2);
-   
+
    /* Initialize pwm.
     *
     * We'll want the fast PWM mode wih the 64 prescaler.
@@ -313,7 +313,7 @@ static void sched_init (void)
 static uint8_t motor_dir   = 0;
 static uint8_t motor_delay = 0;
 static void sched_run( uint8_t flags )
-{  
+{
    /*
     * Run tasks.
     *
@@ -343,8 +343,8 @@ static void sched_run( uint8_t flags )
    if (flags & SCHED_TEMP)
       temp_start(); /* Start temperature conversion. */
 #endif /* MOSKI_USE_TEMP */
-}                                                                         
-        
+}
+
 
 
 /**
@@ -392,7 +392,7 @@ int main (void)
       /* Atomic test to see if has anything to do. */
       cli();
       if (sched_flags != 0) {
-   
+
          /* Atomic store temporary flags and reset real flags in case we run a bit late. */
          flags = sched_flags;
          sched_flags = 0;

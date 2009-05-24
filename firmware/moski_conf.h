@@ -23,8 +23,8 @@
 #define ENCODER_PIN        PINA     /**< Pin encoders are on. */
 #define ENCODER_PORT_A     PA0      /**< Encoder A port. */
 #define ENCODER_PORT_B     PA1      /**< Encoder B port. */
-#define ENCODER_PIN_A      ENCODER_PORT_A /**< Encoder A pin. */
-#define ENCODER_PIN_B      ENCODER_PORT_B /**< Encoder B pin. */
+#define ENCODER_PIN_A      PINA0 /**< Encoder A pin. */
+#define ENCODER_PIN_B      PINA1 /**< Encoder B pin. */
 
 #define ENCODER_NUM        2 /**< Number of areas on the encodor. */
 
