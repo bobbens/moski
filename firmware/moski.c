@@ -26,9 +26,9 @@
  * Example
  *  100 Hz = 20 kHz / 200
  */
-#define SCHED_MOTOR_DIVIDER   6 /**< What to divide main freq by for motor task. */
+#define SCHED_MOTOR_DIVIDER   15 /**< What to divide main freq by for motor task. */
 #define SCHED_TEMP_DIVIDER    1 /**< What to divide main freq by for temp task. */
-#define SCHED_MAX_DIVIDER     6 /**< Overflow amount for scheduler divider. */
+#define SCHED_MAX_DIVIDER     15 /**< Overflow amount for scheduler divider. */
 /* Scheduler state flags. */
 #define SCHED_MOTORS          (1<<0) /**< Run the motor task. */
 #define SCHED_TEMP            (1<<1) /**< Run the temperature task. */
@@ -240,8 +240,8 @@ static void motors_init (void)
    /*TIMSK0 = _BV(TOIE0); *//* Enable overflow interrupt on timer 0. */
 
    /* Start both motors stopped. */
-   OCR0A  = 128;
-   OCR0B  = 128;
+   OCR0A  = 0xFF;
+   OCR0B  = 0xFF;
 }
 
 
@@ -292,6 +292,7 @@ static void sched_init (void)
     *
     *  1 kHz = 20 MHz / (2 * 8 * 1250)
     * 20 kHz = 20 MHz / (2 * 1 * 500)
+    * 50 kHz = 20 Mhz / (2 * 1 * 200)
     */
    TCCR1A = _BV(WGM10) | /* Phase and freq correct mode with OCR1A. */
          0; /* No actual PWM output. */
@@ -304,7 +305,7 @@ static void sched_init (void)
          _BV(CS12) | _BV(CS10); /* 1024 prescaler */
 #endif
    TIMSK1 = _BV(TOIE1); /* Enable Timer1 overflow. */
-   OCR1A  = 500;
+   OCR1A  = 200;
 
    /* Initialize flags. */
    sched_flags = 0;
@@ -314,8 +315,6 @@ static void sched_init (void)
  *
  *    @param flags Current scheduler flags to use.
  */
-static uint8_t motor_dir   = 0;
-static uint8_t motor_delay = 0;
 static void sched_run( uint8_t flags )
 {
    /*
@@ -326,21 +325,6 @@ static void sched_run( uint8_t flags )
     */
    /* Motor task. */
    if (flags & SCHED_MOTORS) {
-      motor_delay++;
-      if (motor_delay==0) {
-         if (!motor_dir) {
-            if (OCR0A > 240)
-               motor_dir = !motor_dir;
-            OCR0A = OCR0A+1;
-            OCR0B = OCR0B+1;
-         }
-         else {
-            if (OCR0A < 80)
-               motor_dir = !motor_dir;
-            OCR0A = OCR0A-1;
-            OCR0B = OCR0B-1;
-         }
-      }
    }
 #if MOSKI_USE_TEMP
    /* Temp task. */
