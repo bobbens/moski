@@ -173,12 +173,34 @@ static __inline void encoders_init (void)
    encoder_init( &encB, (ENCODER_PIN & _BV(ENCODER_PIN_B)) );
 
    /* Set up interrupts. */
-#if 0 /* Using polling instead of interrupts atm. */
    GIMSK       |= _BV(INT0) | _BV(ENCODER_INT); /* Globally enable pin change interrupts. */
    ENCODER_MSK |= _BV(ENCODER_INT_A) | _BV(ENCODER_INT_B); /* Enabled encoder interrupts. */
    MCUCR       |= /*_BV(ISC01) |*/ _BV(ISC00); /* Set on rise/falling edge. */
-#endif
 }
+/**
+ * @brief Encoder signal handler.
+ */
+ISR(ENCODER_SIG)
+{  
+   uint8_t inp;
+
+   /* Check to see if encoder A changed. */
+   inp = ENCODER_PIN & _BV(ENCODER_PIN_A);
+   if (inp != encA.pin_state) { /* See if state changed. */
+      encA.pin_state = inp;
+      encA.last_tick = encA.cur_tick; /* Last tick is current tick. */
+      encA.cur_tick  = 0; /* Reset counter. */
+   }
+
+   /* Check to see if encoder B changed. */
+   inp = ENCODER_PIN & _BV(ENCODER_PIN_B);
+   if (inp != encB.pin_state) { /* See if state changed. */
+      encB.pin_state = inp;
+      encB.last_tick = encB.cur_tick; /* Last tick is current tick. */
+      encB.cur_tick  = 0; /* Reset counter. */
+   }
+}
+
 
 
 /*
@@ -231,31 +253,17 @@ static __inline void motors_init (void)
  */
 ISR(SIG_OVERFLOW1)
 {
-   uint8_t inp;
-
-   /* Check to see if encoder A changed. */
+   /* Increment Encoder A timer. */
    if (encA.cur_tick < UINT16_MAX) /* Avoid overflow. */
       encA.cur_tick++;
    else /* Overflow. */
       encA.last_tick = encA.cur_tick;
-   inp = ENCODER_PIN & _BV(ENCODER_PIN_A);
-   if (inp != encA.pin_state) { /* See if state changed. */
-      encA.pin_state = inp;
-      encA.last_tick = encA.cur_tick; /* Last tick is current tick. */
-      encA.cur_tick  = 0; /* Reset counter. */
-   }
 
-   /* Check to see if encoder B changed. */
+   /* Increment Encoder B timer. */
    if (encB.cur_tick < UINT16_MAX) /* Avoid overflow. */
       encB.cur_tick++;
    else /* Overflow. */
       encB.last_tick = encB.cur_tick;
-   inp = ENCODER_PIN & _BV(ENCODER_PIN_B);
-   if (inp != encB.pin_state) { /* See if state changed. */
-      encB.pin_state = inp;
-      encB.last_tick = encB.cur_tick; /* Last tick is current tick. */
-      encB.cur_tick  = 0; /* Reset counter. */
-   }
 
    /* Do some scheduler stuff here. */
    if (!(sched_counter % SCHED_MOTOR_DIVIDER))
