@@ -23,8 +23,8 @@
 #define ENCODER_SIG        SIG_PIN_CHANGE0 /**< Interrupt vector for encoders. */
 
 #define ENCODER_DDR        DDRA     /**< DDR register for encoders. */
-#define ENCODER_DD_A       DA0      /**< Encoder A dd pin. */
-#define ENCODER_DD_B       DA1      /**< Encoder A dd pin. */
+#define ENCODER_DD_A       DDA0     /**< Encoder A dd pin. */
+#define ENCODER_DD_B       DDA1     /**< Encoder A dd pin. */
 #define ENCODER_PORT       PORTA    /**< PORT register for encoders. */
 #define ENCODER_PORT_A     PA0      /**< Encoder A port. */
 #define ENCODER_PORT_B     PA1      /**< Encoder B port. */
