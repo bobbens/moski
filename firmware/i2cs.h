@@ -67,5 +67,12 @@ void i2cs_setReadCallback( i2cs_read_callback_t callback );
 void i2cs_setWriteCallback( i2cs_write_callback_t callback );
 
 
+/*
+ * Timeout.
+ */
+void i2cs_setTimeout( uint8_t top );
+void i2cs_timeoutTick (void);
+
+
 #endif /* I2C_SLAVE_H */
 

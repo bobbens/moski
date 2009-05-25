@@ -9,6 +9,7 @@
  * Current state.
  */
 typedef enum i2cs_state_e {
+   I2CS_STATE_IDLE, /**< I2C is idle. */
    I2CS_STATE_CHECK_ADDRESS, /**< Checking address to see if it involves self. */
    I2CS_STATE_CHECK_REPLY_FROM_SEND_DATA, /**< Checking to see if send data worked. */
    I2CS_STATE_SEND_DATA, /**< Send data. */
@@ -21,6 +22,8 @@ typedef enum i2cs_state_e {
 
 static uint8_t i2cs_address = 0x00; /**< Default slave address. */
 static i2cs_state_t i2cs_overflow_state = I2CS_STATE_CHECK_ADDRESS; /**< Current state. */
+static uint8_t i2cs_timeout = 0; /**< Time out counter. */
+static uint8_t i2cs_timeoutTop = 100; /**< Point at which i2cs times out. */
 
 
 /*
@@ -78,6 +81,8 @@ static uint8_t i2cs_tx_len = 0x00; /**< Current length of data within the TX buf
            (1<<USICS1) | (0<<USICS0) | (0<<USICLK) | (0<<USITC); \
    USISR = (0<<USI_START_COND_INT) | /* Clear all flags except start cond. */ \
            (1<<USIOIF) | (1<<USIPF) | (1<<USIDC) | (0x0<<USICNT0); \
+   /* Set as Idle. */ \
+   i2cs_overflow_state = I2CS_STATE_IDLE; \
 }
 #define SET_USI_TO_SEND_DATA() \
 { \
@@ -126,6 +131,39 @@ void i2cs_init (void)
    i2cs_rx_pos = 0x00;
    i2cs_tx_pos = 0x00;
    i2cs_tx_len = 0x00;
+
+   /* Reset timeout. */
+   i2cs_timeout = 0;
+}
+
+
+/**
+ * @brief Sets the timeout reset overflow.
+ *
+ *    @param top Top value of timeout counter to define overflow.
+ */
+void i2cs_setTimeout( uint8_t top )
+{
+   i2cs_timeout    = 0;
+   i2cs_timeoutTop = top;
+}
+
+
+/**
+ * @brief Increments the timeout counter, resetting when reaches top.
+ */
+void i2cs_timeoutTick (void)
+{
+   /* Do not time out in idle mode. */
+   if (i2cs_overflow_state == I2CS_STATE_IDLE)
+      return;
+
+   /* Increment timer. */
+   i2cs_timeout++;
+
+   /* Time out. */
+   if (i2cs_timeout > i2cs_timeoutTop)
+      SET_USI_TO_I2C_START_CONDITION_MODE();
 }
 
 
@@ -134,6 +172,9 @@ void i2cs_init (void)
  */
 ISR(SIG_USI_START)
 {
+   /* Reset timeout counter. */
+   i2cs_timeout = 0;
+
    /* Set default starting conditions for new I2C package. */
    i2cs_overflow_state = I2CS_STATE_CHECK_ADDRESS;
    DDR_USI  &= ~_BV(PORT_USI_SDA); /* Set SDA as input. */
@@ -166,6 +207,9 @@ ISR(SIG_USI_START)
  */
 ISR(SIG_USI_OVERFLOW)
 {
+   /* Reset timeout counter. */
+   i2cs_timeout = 0;
+
    /* Handle current state. */
    switch (i2cs_overflow_state) {
 
@@ -269,6 +313,10 @@ ISR(SIG_USI_OVERFLOW)
       /* Resets the connection. */
       case I2CS_STATE_ABORT:
          SET_USI_TO_I2C_START_CONDITION_MODE();
+         break;
+
+      /* Don't do anything if idle. */
+      case I2CS_STATE_IDLE:
          break;
    }
 }

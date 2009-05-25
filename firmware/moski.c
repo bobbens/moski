@@ -27,11 +27,13 @@
  *  100 Hz = 20 kHz / 200
  */
 #define SCHED_MOTOR_DIVIDER   6 /**< What to divide main freq by for motor task. */
+#define SCHED_I2CS_TIMEOUT_DIVIDER 240 /**< Timeout tick for I2CS. */
 #define SCHED_TEMP_DIVIDER    1 /**< What to divide main freq by for temp task. */
-#define SCHED_MAX_DIVIDER     6 /**< Overflow amount for scheduler divider. */
+#define SCHED_MAX_DIVIDER     240 /**< Overflow amount for scheduler divider. */
 /* Scheduler state flags. */
 #define SCHED_MOTORS          (1<<0) /**< Run the motor task. */
-#define SCHED_TEMP            (1<<1) /**< Run the temperature task. */
+#define SCHED_I2CS_TIMEOUT    (1<<1) /**< Updates the i2cs timeout. */
+#define SCHED_TEMP            (1<<2) /**< Run the temperature task. */
 
 
 /**
@@ -70,6 +72,7 @@ static encoder_t encB; /**< Encoder on motor B. */
  */
 typedef struct motor_s {
    uint16_t target; /**< Target velocity. */
+   uint16_t e_accum; /**< Accumulated error, for integral part. */
 } motor_t;
 static motor_t motA; /**< Motor A. */
 static motor_t motB; /**< Motor B. */
@@ -230,7 +233,8 @@ ISR(ENCODER_SIG)
  */
 static void motor_initStruct( motor_t *mot )
 {
-   mot->target = 10;
+   mot->target  = 60;
+   mot->e_accum = 0;
 }
 /**
  * @brief Initializes the motors.
@@ -294,8 +298,14 @@ static uint8_t motor_control( motor_t *mot, encoder_t *enc )
    /* Calculate the error. */
    error    = mot->target - feedback;
 
-   /* Run control. */
-   output   = error * 10;
+   /** Accumulate error. */
+   mot->e_accum += error;
+   if (mot->e_accum > 255) /* Anti-windup. */
+      mot->e_accum = 255;
+
+   /* Run control - PI. */
+   output   = error * 10; /* P */
+   output  += mot->e_accum / 10; /* I */
 
    /* Get PWM output. */
    pwm      = (output > 255) ? 0xFF : (uint8_t)output;
@@ -332,6 +342,8 @@ ISR(SIG_OVERFLOW1)
    /* Do some scheduler stuff here. */
    if (!(sched_counter % SCHED_MOTOR_DIVIDER))
       sched_flags |= SCHED_MOTORS;
+   if (!(sched_counter % SCHED_I2CS_TIMEOUT_DIVIDER))
+      sched_flags |= SCHED_I2CS_TIMEOUT;
 #if MOSKI_USE_TEMP
    if (!(sched_counter % SCHED_TEMP_DIVIDER))
       sched_flags |= SCHED_TEMP;
@@ -388,6 +400,8 @@ static void sched_run( uint8_t flags )
       OCR0A = motor_control( &motA, &encA );
       OCR0B = motor_control( &motB, &encB );
    }
+   if (flags & SCHED_I2CS_TIMEOUT)
+      i2cs_timeoutTick();
 #if MOSKI_USE_TEMP
    /* Temp task. */
    if (flags & SCHED_TEMP)
@@ -414,6 +428,7 @@ int main (void)
    i2cs_setAddress( 0x09 );
    i2cs_setReadCallback( moski_read );
    i2cs_setWriteCallback( moski_write );
+   i2cs_setTimeout( 100 );
    i2cs_init();
 
    /* Set sleep mode. */
