@@ -26,9 +26,9 @@
  * Example
  *  100 Hz = 20 kHz / 200
  */
-#define SCHED_MOTOR_DIVIDER   15 /**< What to divide main freq by for motor task. */
+#define SCHED_MOTOR_DIVIDER   6 /**< What to divide main freq by for motor task. */
 #define SCHED_TEMP_DIVIDER    1 /**< What to divide main freq by for temp task. */
-#define SCHED_MAX_DIVIDER     15 /**< Overflow amount for scheduler divider. */
+#define SCHED_MAX_DIVIDER     6 /**< Overflow amount for scheduler divider. */
 /* Scheduler state flags. */
 #define SCHED_MOTORS          (1<<0) /**< Run the motor task. */
 #define SCHED_TEMP            (1<<1) /**< Run the temperature task. */
@@ -230,7 +230,7 @@ ISR(ENCODER_SIG)
  */
 static void motor_initStruct( motor_t *mot )
 {
-   mot->target = 0;
+   mot->target = 10;
 }
 /**
  * @brief Initializes the motors.
@@ -276,6 +276,7 @@ static void motors_init (void)
 static uint8_t motor_control( motor_t *mot, encoder_t *enc )
 {
    int16_t feedback, error, output;
+   uint8_t pwm;
 
    /* Process the feedback.
     *
@@ -288,7 +289,7 @@ static uint8_t motor_control( motor_t *mot, encoder_t *enc )
     *  ---------  = revolutions per second
     *      X
     */
-   feedback = 12500 / enc->last_tick;
+   feedback = 5000 / enc->last_tick;
 
    /* Calculate the error. */
    error    = mot->target - feedback;
@@ -296,8 +297,11 @@ static uint8_t motor_control( motor_t *mot, encoder_t *enc )
    /* Run control. */
    output   = error * 10;
 
+   /* Get PWM output. */
+   pwm      = (output > 255) ? 0xFF : (uint8_t)output;
+
    /* It's inverted. */
-   return 0xFF - (output>>8);
+   return 0xFF - pwm;
 }
 
 
@@ -361,7 +365,7 @@ static void sched_init (void)
          _BV(CS12) | _BV(CS10); /* 1024 prescaler */
 #endif
    TIMSK1 = _BV(TOIE1); /* Enable Timer1 overflow. */
-   OCR1A  = 200;
+   OCR1A  = 500;
 
    /* Initialize flags. */
    sched_flags = 0;
