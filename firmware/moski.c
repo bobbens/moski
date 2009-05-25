@@ -73,6 +73,10 @@ static encoder_t encB; /**< Encoder on motor B. */
 typedef struct motor_s {
    uint16_t target; /**< Target velocity. */
    uint16_t e_accum; /**< Accumulated error, for integral part. */
+
+   /* Controller parameters - these are divided by 16 (>>4). */
+   uint8_t kp; /**< Proportional part of the controller. */
+   uint8_t ki; /**< Integral part of the controller. */
 } motor_t;
 static motor_t motA; /**< Motor A. */
 static motor_t motB; /**< Motor B. */
@@ -235,6 +239,10 @@ static void motor_initStruct( motor_t *mot )
 {
    mot->target  = 60;
    mot->e_accum = 0;
+
+   /* Controller parameters. */
+   mot->kp      = 16;
+   mot->ki      = 2;
 }
 /**
  * @brief Initializes the motors.
@@ -304,8 +312,8 @@ static uint8_t motor_control( motor_t *mot, encoder_t *enc )
       mot->e_accum = 3000;
 
    /* Run control - PI. */
-   output   = error * 10; /* P */
-   output  += mot->e_accum / 10; /* I */
+   output   = (error * mot->kp) >> 4; /* P */
+   output  += (mot->e_accum * mot->ki) >> 4; /* I */
 
    /* Get PWM output, note we can't do backwards. */
    if (output > 255)
@@ -313,7 +321,7 @@ static uint8_t motor_control( motor_t *mot, encoder_t *enc )
    else if (output < 0)
       pwm = 0;
    else
-      output = pwm;
+      pwm = output;
 
    /* It's inverted. */
    return 0xFF - pwm;
