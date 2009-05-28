@@ -259,6 +259,9 @@ static void motors_init (void)
    DDRA  |= _BV(DDA7);
    DDRB  |= _BV(DDB2);
 
+   /* Set direction forward */
+   PORTA &= ~( _BV(PA2) | _BV(PA3) );
+
    /* Initialize pwm.
     *
     * We'll want the fast PWM mode wih the 64 prescaler.
