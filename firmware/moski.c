@@ -71,7 +71,10 @@ static encoder_t encB; /**< Encoder on motor B. */
  * @brief The motor structure.
  */
 typedef struct motor_s {
+   /* Target. */
    uint16_t target; /**< Target velocity. */
+
+   /* Internal usage variables. */
    int16_t e_accum; /**< Accumulated error, for integral part. */
 
    /* Controller parameters - these are divided by 16 (>>4). */
@@ -190,6 +193,8 @@ static void encoders_init (void)
 {
    /* Set pins as input. */
    ENCODER_DDR  &= ~(_BV(ENCODER_DD_A) | _BV(ENCODER_DD_B));
+
+   /* Initialize data structures. */
    encoder_initStruct( &encA, (ENCODER_PIN & _BV(ENCODER_PIN_A)) );
    encoder_initStruct( &encB, (ENCODER_PIN & _BV(ENCODER_PIN_B)) );
 
@@ -238,7 +243,10 @@ ISR(ENCODER_SIG)
  */
 static void motor_initStruct( motor_t *mot )
 {
+   /* Target to seek out, 60 until communication issues are solved. */
    mot->target  = 60;
+
+   /* Internal use variables. */
    mot->e_accum = 0;
 
    /* Controller parameters. */
@@ -486,6 +494,7 @@ int main (void)
       }
       /* Sleep. */
       else {
+         /* Atomic sleep as specified on the documentation. */
          sleep_enable();
          sei();
          sleep_cpu();
