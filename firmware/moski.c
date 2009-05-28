@@ -72,11 +72,12 @@ static encoder_t encB; /**< Encoder on motor B. */
  */
 typedef struct motor_s {
    uint16_t target; /**< Target velocity. */
-   uint16_t e_accum; /**< Accumulated error, for integral part. */
+   int16_t e_accum; /**< Accumulated error, for integral part. */
 
    /* Controller parameters - these are divided by 16 (>>4). */
    uint8_t kp; /**< Proportional part of the controller. */
    uint8_t ki; /**< Integral part of the controller. */
+   int16_t windup; /**< Windup limit. */
 } motor_t;
 static motor_t motA; /**< Motor A. */
 static motor_t motB; /**< Motor B. */
@@ -243,6 +244,7 @@ static void motor_initStruct( motor_t *mot )
    /* Controller parameters. */
    mot->kp      = 16;
    mot->ki      = 2;
+   mot->windup  = 10000;
 }
 /**
  * @brief Initializes the motors.
@@ -311,8 +313,11 @@ static uint8_t motor_control( motor_t *mot, encoder_t *enc )
 
    /** Accumulate error. */
    mot->e_accum += error;
-   if (mot->e_accum > 255) /* Anti-windup. */
-      mot->e_accum = 3000;
+   /* Anti-windup. */
+   if (mot->e_accum > mot->windup)
+      mot->e_accum = mot->windup;
+   else if (mot->e_accum < -mot->windup)
+      mot->e_accum = -mot->windup;
 
    /* Run control - PI. */
    output   = (error * mot->kp) >> 4; /* P */
