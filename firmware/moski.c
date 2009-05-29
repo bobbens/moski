@@ -250,8 +250,8 @@ static void motor_initStruct( motor_t *mot )
    mot->e_accum = 0;
 
    /* Controller parameters. */
-   mot->kp      = 16;
-   mot->ki      = 2;
+   mot->kp      = 20;
+   mot->ki      = 20;
    mot->windup  = 10000;
 }
 /**
@@ -260,8 +260,8 @@ static void motor_initStruct( motor_t *mot )
 static void motors_init (void)
 {
    /* Initialize reverse pins. */
-   PORTA |= _BV(PA3) |
-            _BV(PA2);
+   PORTA &= ~_BV(PA3) |
+            ~_BV(PA2);
    DDRA  |= _BV(PINA3) |
             _BV(PINA2);
 
@@ -282,8 +282,8 @@ static void motors_init (void)
    /*TIMSK0 = _BV(TOIE0); *//* Enable overflow interrupt on timer 0. */
 
    /* Start both motors stopped. */
-   OCR0A  = 0xFF;
-   OCR0B  = 0xFF;
+   OCR0A  = 0x00;
+   OCR0B  = 0x00;
 
    /* Initialize motor structures. */
    motor_initStruct( &motA );
@@ -337,7 +337,7 @@ static uint8_t motor_control( motor_t *mot, encoder_t *enc )
       pwm = output;
 
    /* It's inverted. */
-   return 0xFF - pwm;
+   return pwm;
 }
 
 
