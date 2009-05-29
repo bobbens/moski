@@ -71,7 +71,10 @@ static encoder_t encB; /**< Encoder on motor B. */
  * @brief The motor structure.
  */
 typedef struct motor_s {
+   /* Target. */
    uint16_t target; /**< Target velocity. */
+
+   /* Internal usage variables. */
    int16_t e_accum; /**< Accumulated error, for integral part. */
 
    /* Controller parameters - these are divided by 16 (>>4). */
@@ -190,6 +193,8 @@ static void encoders_init (void)
 {
    /* Set pins as input. */
    ENCODER_DDR  &= ~(_BV(ENCODER_DD_A) | _BV(ENCODER_DD_B));
+
+   /* Initialize data structures. */
    encoder_initStruct( &encA, (ENCODER_PIN & _BV(ENCODER_PIN_A)) );
    encoder_initStruct( &encB, (ENCODER_PIN & _BV(ENCODER_PIN_B)) );
 
@@ -238,12 +243,15 @@ ISR(ENCODER_SIG)
  */
 static void motor_initStruct( motor_t *mot )
 {
+   /* Target to seek out, 60 until communication issues are solved. */
    mot->target  = 60;
+
+   /* Internal use variables. */
    mot->e_accum = 0;
 
    /* Controller parameters. */
-   mot->kp      = 16;
-   mot->ki      = 2;
+   mot->kp      = 20;
+   mot->ki      = 20;
    mot->windup  = 10000;
 }
 /**
@@ -252,8 +260,8 @@ static void motor_initStruct( motor_t *mot )
 static void motors_init (void)
 {
    /* Initialize reverse pins. */
-   PORTA |= _BV(PA3) |
-            _BV(PA2);
+   PORTA &= ~_BV(PA3) |
+            ~_BV(PA2);
    DDRA  |= _BV(PINA3) |
             _BV(PINA2);
 
@@ -277,8 +285,8 @@ static void motors_init (void)
    /*TIMSK0 = _BV(TOIE0); *//* Enable overflow interrupt on timer 0. */
 
    /* Start both motors stopped. */
-   OCR0A  = 0xFF;
-   OCR0B  = 0xFF;
+   OCR0A  = 0x00;
+   OCR0B  = 0x00;
 
    /* Initialize motor structures. */
    motor_initStruct( &motA );
@@ -332,7 +340,7 @@ static uint8_t motor_control( motor_t *mot, encoder_t *enc )
       pwm = output;
 
    /* It's inverted. */
-   return 0xFF - pwm;
+   return pwm;
 }
 
 
@@ -489,6 +497,7 @@ int main (void)
       }
       /* Sleep. */
       else {
+         /* Atomic sleep as specified on the documentation. */
          sleep_enable();
          sei();
          sleep_cpu();
