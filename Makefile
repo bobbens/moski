@@ -16,9 +16,12 @@ PROJECT        := moski
 #
 #       MAKE FUNCTIONS
 #
-.PHONY: all clean
+.PHONY: all dox hex clean
 
-all: dox
+all: hex
+
+hex:
+	@(cd firmware; $(MAKE))
 
 clean:
 	$(REMOVE) $(OBJS) $(PRG).elf $(PRG).hex
