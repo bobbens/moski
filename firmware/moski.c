@@ -251,7 +251,7 @@ static void motor_initStruct( motor_t *mot )
 
    /* Controller parameters. */
    mot->kp      = 20;
-   mot->ki      = 20;
+   mot->ki      = 2;
    mot->windup  = 10000;
 }
 /**
