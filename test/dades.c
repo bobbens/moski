@@ -60,7 +60,7 @@ int main( int argc, char *argv[] )
    int fd;
    int i, n;
    char buf[128];
-   uint16_t ui;
+   uint16_t ua, ub;
 
    if (argc<2) {
       fprintf(stdout,"Syntax: %s file\n", argv[0]);
@@ -77,11 +77,12 @@ int main( int argc, char *argv[] )
    n = 0;
    while (1) {
       i = 0;
-      while (i<6) {
-         i += read( fd, &buf[i], 6-i );
+      while (i<4) {
+         i += read( fd, &buf[i], 4-i );
       }
-      ui = (buf[0]<<8) + buf[1];
-      fprintf(stdout, "%d %u\n", n, ui );
+      ua = (buf[0]<<8) + buf[1];
+      ub = (buf[2]<<8) + buf[3];
+      fprintf(stdout, "%d %u %u\n", n, ua, ub );
       n++;
    }
 

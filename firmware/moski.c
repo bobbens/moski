@@ -251,7 +251,7 @@ static void motor_initStruct( motor_t *mot )
 
    /* Controller parameters. */
    mot->kp      = 20;
-   mot->ki      = 20;
+   mot->ki      = 2;
    mot->windup  = 10000;
 }
 /**
@@ -278,10 +278,12 @@ static void motors_init (void)
     *
     *    f_pwm = f_clk / (256 * N)
     *    f_pwm = 20 MHz / (256 * 64) = 1.22 kHz
+    *    f_pwm = 20 MHz / (256 * 8)  = 9.76 kHz
     */
    TCCR0A = _BV(WGM00) | _BV(WGM01) | /* Fast PWM mode. */
             _BV(COM0A1) | _BV(COM0B1); /* Non-inverting mode. */
-   TCCR0B = _BV(CS01)  | _BV(CS00); /* 64 prescaler */
+   /*TCCR0B = _BV(CS01)  | _BV(CS00);*/ /* 64 prescaler */
+   TCCR0B = _BV(CS01); /* 8 prescaler. */
    /*TIMSK0 = _BV(TOIE0); *//* Enable overflow interrupt on timer 0. */
 
    /* Start both motors stopped. */
@@ -305,12 +307,12 @@ static uint8_t motor_control( motor_t *mot, encoder_t *enc )
 
    /* Process the feedback.
     *
-    *    ticks[50kHz]   N encoder turn        1 second
+    *    ticks[20kHz]   N encoder turn        1 second
     * X  ------------ * -------------- * -------------------   ===>
-    *    encoder turn    1 revolution     50000 ticks[50kHz]
+    *    encoder turn    1 revolution     20000 ticks[50kHz]
     *
     *
-    *  N / 50000
+    *  20000 / N
     *  ---------  = revolutions per second
     *      X
     */
@@ -319,7 +321,7 @@ static uint8_t motor_control( motor_t *mot, encoder_t *enc )
    /* Calculate the error. */
    error    = mot->target - feedback;
 
-   /** Accumulate error. */
+   /* Accumulate error. */
    mot->e_accum += error;
    /* Anti-windup. */
    if (mot->e_accum > mot->windup)
