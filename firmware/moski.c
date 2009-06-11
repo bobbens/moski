@@ -26,7 +26,7 @@
  * Example
  *  100 Hz = 20 kHz / 200
  */
-#define SCHED_MOTOR_DIVIDER   6 /**< What to divide main freq by for motor task. */
+#define SCHED_MOTOR_DIVIDER   60 /**< What to divide main freq by for motor task. */
 #define SCHED_I2CS_TIMEOUT_DIVIDER 240 /**< Timeout tick for I2CS. */
 #define SCHED_TEMP_DIVIDER    1 /**< What to divide main freq by for temp task. */
 #define SCHED_MAX_DIVIDER     240 /**< Overflow amount for scheduler divider. */
@@ -244,15 +244,15 @@ ISR(ENCODER_SIG)
 static void motor_initStruct( motor_t *mot )
 {
    /* Target to seek out, 60 until communication issues are solved. */
-   mot->target  = 60;
+   mot->target  = 50;
 
    /* Internal use variables. */
    mot->e_accum = 0;
 
    /* Controller parameters. */
-   mot->kp      = 20;
-   mot->ki      = 2;
-   mot->windup  = 10000;
+   mot->kp      = 100;
+   mot->ki      = 5;
+   mot->windup  = 816;
 }
 /**
  * @brief Initializes the motors.
